@@ -155,20 +155,9 @@ export default function App(){
     setLoading(true);setError("");setEps([]);setSel([]);
     const ctx=matched.map(v=>`"${v.title}" by ${v.ch} (${v.pi}x, ${fmt(v.views)} views, ${v.date})`).join("\n");
     const gl=isInt?"This is an INTERNAL episode hosted by Doza and the Geronimo team. Focus on topics Doza can speak to from experience running fitness studios.":"GUEST: "+gName+"\nBACKGROUND: "+gDesc;
+    const promptText="You are an episode planner for the Geronimo Unfiltered Podcast, hosted by Doza (Andrew Handosa). The podcast is for ambitious fitness studio owners.\n\n"+gl+"\n\nGenerate exactly 5 episode concepts inspired by these proven performers. Punchy titles. No fluff.\n\nReturn ONLY valid JSON array:\n[{\"title\":\"\",\"angle\":\"\",\"points\":[\"\",\"\",\"\"],\"inspired\":\"Name the specific video, channel, performance, and why it works\"}]\n\nPROVEN PERFORMERS:\n"+ctx;
     try{
-      const res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({prompt:`You are an episode planner for the Geronimo Unfiltered Podcast, hosted by Doza (Andrew Handosa). The podcast is for ambitious fitness studio owners.
-
-${gl}
-
-Generate exactly 5 episode concepts inspired by these proven performers. Punchy titles. No fluff.
-
-Return ONLY valid JSON array:
-[{"title":"","angle":"","points":["","",""],"inspired":"Name the specific video, channel, performance, and why it works"}]
-
-PROVEN PERFORMERS:
-${ctx}`})});
-${ctx}`}]})});
+      const res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:promptText})});
       if(!res.ok){setError("API error "+res.status);setLoading(false);return;}
       const data=await res.json();
       if(!data.content?.[0]?.text){setError("Empty response");setLoading(false);return;}
