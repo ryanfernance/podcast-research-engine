@@ -156,9 +156,8 @@ export default function App(){
     const ctx=matched.map(v=>`"${v.title}" by ${v.ch} (${v.pi}x, ${fmt(v.views)} views, ${v.date})`).join("\n");
     const gl=isInt?"This is an INTERNAL episode hosted by Doza and the Geronimo team. Focus on topics Doza can speak to from experience running fitness studios.":"GUEST: "+gName+"\nBACKGROUND: "+gDesc;
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4096,
-          messages:[{role:"user",content:`You are an episode planner for the Geronimo Unfiltered Podcast, hosted by Doza (Andrew Handosa). The podcast is for ambitious fitness studio owners.
+      const res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({prompt:`You are an episode planner for the Geronimo Unfiltered Podcast, hosted by Doza (Andrew Handosa). The podcast is for ambitious fitness studio owners.
 
 ${gl}
 
@@ -168,6 +167,7 @@ Return ONLY valid JSON array:
 [{"title":"","angle":"","points":["","",""],"inspired":"Name the specific video, channel, performance, and why it works"}]
 
 PROVEN PERFORMERS:
+${ctx}`})});
 ${ctx}`}]})});
       if(!res.ok){setError("API error "+res.status);setLoading(false);return;}
       const data=await res.json();
