@@ -62,19 +62,39 @@ function VCard({v,i}){
 }
 
 function EpCard({ep,i,on,toggle}){
-  return <div className={`epc ${on?"on":""}`} onClick={toggle}>
-    {on&&<div style={{position:"absolute",top:16,right:16,width:26,height:26,borderRadius:8,background:"#22C55E",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:15,fontWeight:700}}>&#10003;</div>}
-    <div style={{fontSize:11,color:on?"#22C55E":"#D1D5DB",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>CONCEPT {i+1}</div>
-    <h3 style={{fontSize:18,fontWeight:700,color:"#111",lineHeight:1.35,paddingRight:on?36:0,marginBottom:8}}>{ep.title}</h3>
-    <p style={{fontSize:14,color:"#6B7280",lineHeight:1.55,marginBottom:12}}>{ep.angle}</p>
-    <p style={{fontSize:12,color:"#D1D5DB",fontStyle:"italic",lineHeight:1.4}}>{ep.inspired?.slice(0,150)}</p>
+  const [open,setOpen]=useState(false);
+  return <div className={`epc ${on?"on":""}`}>
+    <div onClick={toggle} style={{cursor:"pointer"}}>
+      {on&&<div style={{position:"absolute",top:16,right:16,width:26,height:26,borderRadius:8,background:"#22C55E",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:15,fontWeight:700}}>&#10003;</div>}
+      <div style={{fontSize:11,color:on?"#22C55E":"#D1D5DB",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>CONCEPT {i+1}</div>
+      <h3 style={{fontSize:18,fontWeight:700,color:"#111",lineHeight:1.35,paddingRight:on?36:0,marginBottom:8}}>{ep.title}</h3>
+      <p style={{fontSize:14,color:"#6B7280",lineHeight:1.55,marginBottom:8}}>{ep.hook||ep.angle||""}</p>
+      {ep.why_it_works&&<p style={{fontSize:13,color:"#9CA3AF",lineHeight:1.5,marginBottom:10}}>{ep.why_it_works}</p>}
+      <p style={{fontSize:12,color:"#D1D5DB",fontStyle:"italic"}}>{ep.source||ep.inspired||""}</p>
+    </div>
+    {(ep.beats||ep.opening)&&<div style={{marginTop:12}}>
+      <button onClick={(e)=>{e.stopPropagation();setOpen(!open)}} style={{fontSize:12,color:"#22C55E",fontWeight:600,background:"none",border:"none",cursor:"pointer",padding:0}}>{open?"Hide details ":"Show beats & opening "}{open?"\u25B2":"\u25BC"}</button>
+      {open&&<div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #F3F4F6"}}>
+        {ep.opening&&<div style={{marginBottom:16}}>
+          <div style={{fontSize:11,color:"#22C55E",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>OPENING (FIRST 30 SECONDS)</div>
+          <p style={{fontSize:14,color:"#374151",lineHeight:1.55,fontStyle:"italic",background:"#FAFAFA",padding:14,borderRadius:8,borderLeft:"3px solid #22C55E"}}>{ep.opening}</p>
+        </div>}
+        {ep.beats&&<div>
+          <div style={{fontSize:11,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>BEATS TO HIT</div>
+          {ep.beats.map((b,j)=><div key={j} style={{display:"flex",gap:10,marginBottom:8}}>
+            <span style={{flex:"0 0 24px",height:24,borderRadius:6,background:"#000",color:"#7DF94F",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{j+1}</span>
+            <p style={{fontSize:14,color:"#374151",lineHeight:1.5,paddingTop:1}}>{b}</p>
+          </div>)}
+        </div>}
+      </div>}
+    </div>}
   </div>;
 }
 
 function DozaBrief({sel,eps,gName,gDesc,isInt,onClose}){
   const picked=eps.filter((_,i)=>sel.includes(i));
   return <div style={{position:"fixed",inset:0,zIndex:100,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(12px)"}} onClick={onClose}>
-    <div style={{background:"#FFF",borderRadius:20,maxWidth:720,width:"100%",maxHeight:"90vh",overflow:"auto",padding:36,position:"relative",boxShadow:"0 32px 80px rgba(0,0,0,0.12)",animation:"fadeUp 0.3s ease"}} onClick={e=>e.stopPropagation()}>
+    <div style={{background:"#FFF",borderRadius:20,maxWidth:760,width:"100%",maxHeight:"90vh",overflow:"auto",padding:36,position:"relative",boxShadow:"0 32px 80px rgba(0,0,0,0.12)",animation:"fadeUp 0.3s ease"}} onClick={e=>e.stopPropagation()}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:20,background:"#F3F4F6",border:"none",width:32,height:32,borderRadius:8,fontSize:16,color:"#9CA3AF",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>&#10005;</button>
       <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:28}}>
         <div style={{width:44,height:44,borderRadius:12,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue',sans-serif",color:"#7DF94F",fontSize:24}}>G</div>
@@ -89,18 +109,26 @@ function DozaBrief({sel,eps,gName,gDesc,isInt,onClose}){
       </div>}
       {picked.map((ep,i)=><div key={i} style={{background:"#FAFAFA",borderRadius:14,padding:24,marginBottom:20}}>
         <div style={{fontSize:11,color:"#22C55E",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>CONCEPT {i+1}</div>
-        <h3 style={{fontSize:22,fontWeight:700,color:"#111",lineHeight:1.3,marginBottom:10}}>{ep.title}</h3>
-        <p style={{fontSize:15,color:"#4B5563",lineHeight:1.55,marginBottom:20}}>{ep.angle}</p>
-        <div style={{marginBottom:20}}>
-          <div style={{fontSize:11,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>TALKING POINTS</div>
-          {ep.points?.map((p,j)=><div key={j} style={{display:"flex",gap:12,marginBottom:10}}>
+        <h3 style={{fontSize:22,fontWeight:700,color:"#111",lineHeight:1.3,marginBottom:6}}>{ep.title}</h3>
+        <p style={{fontSize:15,color:"#4B5563",lineHeight:1.55,marginBottom:6}}>{ep.hook||ep.angle||""}</p>
+        {ep.why_it_works&&<div style={{background:"#FFF",borderRadius:10,padding:14,marginBottom:16,border:"1px solid #E5E7EB"}}>
+          <div style={{fontSize:11,color:"#22C55E",fontWeight:700,letterSpacing:"0.06em",marginBottom:4}}>WHY IT WORKS</div>
+          <p style={{fontSize:14,color:"#374151",lineHeight:1.55}}>{ep.why_it_works}</p>
+        </div>}
+        {ep.opening&&<div style={{marginBottom:16}}>
+          <div style={{fontSize:11,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>OPENING (FIRST 30 SECONDS)</div>
+          <p style={{fontSize:15,color:"#374151",lineHeight:1.6,fontStyle:"italic",background:"#FFF",padding:16,borderRadius:10,borderLeft:"3px solid #22C55E"}}>{ep.opening}</p>
+        </div>}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:11,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>BEATS TO HIT</div>
+          {(ep.beats||ep.points||[]).map((p,j)=><div key={j} style={{display:"flex",gap:12,marginBottom:10}}>
             <span style={{flex:"0 0 28px",height:28,borderRadius:8,background:"#000",color:"#7DF94F",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{j+1}</span>
             <p style={{fontSize:15,color:"#374151",lineHeight:1.55,paddingTop:3}}>{p}</p>
           </div>)}
         </div>
         <div style={{background:"#FFF",borderRadius:10,padding:16}}>
           <div style={{fontSize:11,color:"#D1D5DB",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>PRE-VALIDATED BY</div>
-          <p style={{fontSize:13,color:"#9CA3AF",fontStyle:"italic",lineHeight:1.55}}>{ep.inspired}</p>
+          <p style={{fontSize:13,color:"#9CA3AF",fontStyle:"italic",lineHeight:1.55}}>{ep.source||ep.inspired||""}</p>
         </div>
       </div>)}
     </div>
@@ -153,9 +181,9 @@ export default function App(){
 
   const generate=async()=>{
     setLoading(true);setError("");setEps([]);setSel([]);
-    const ctx=matched.map(v=>`"${v.title}" by ${v.ch} (${v.pi}x, ${fmt(v.views)} views, ${v.date})`).join("\n");
-    const gl=isInt?"This is an INTERNAL episode hosted by Doza and the Geronimo team. Focus on topics Doza can speak to from experience running fitness studios.":"GUEST: "+gName+"\nBACKGROUND: "+gDesc;
-    const promptText="You are an episode planner for the Geronimo Unfiltered Podcast, hosted by Doza (Andrew Handosa). The podcast is for ambitious fitness studio owners.\n\n"+gl+"\n\nGenerate exactly 5 episode concepts inspired by these proven performers. Punchy titles. No fluff.\n\nReturn ONLY valid JSON array:\n[{\"title\":\"\",\"angle\":\"\",\"points\":[\"\",\"\",\"\"],\"inspired\":\"Name the specific video, channel, performance, and why it works\"}]\n\nPROVEN PERFORMERS:\n"+ctx;
+    const ctx=matched.map(v=>"- \""+v.title+"\" by "+v.ch+" ("+v.pi+"x performance index, "+fmt(v.views)+" views, "+v.date+")").join("\n");
+    const gl=isInt?"This is an INTERNAL episode hosted by Doza and the Geronimo team. Doza is a former multi-studio fitness owner who has coached hundreds of studio owners. Focus on topics he can speak to from lived experience.":"GUEST: "+gName+"\nBACKGROUND: "+gDesc;
+    const promptText="You are a senior podcast producer for the Geronimo Unfiltered Podcast, hosted by Doza (Andrew Handosa). The audience is ambitious fitness studio owners building profitable businesses.\n\n"+gl+"\n\nUsing the proven performers below as inspiration, generate exactly 5 episode concepts. Each concept must be deeply thought out and production-ready.\n\nFor each concept provide:\n- title: A punchy, specific episode title that would make a studio owner stop scrolling. No generic titles.\n- hook: One sentence on WHY someone clicks this episode. What tension, curiosity, or pain does it tap into?\n- why_it_works: 2-3 sentences explaining why this concept is pre-validated. Reference the specific source video's performance and what made it resonate.\n- beats: An array of 5-6 specific content beats Doza should hit during the episode. These should be concrete talking points, stories to tell, frameworks to share, or questions to pose. Not vague topics.\n- opening: How Doza opens the episode. The first 30 seconds. Write it in his direct, no-BS voice.\n- source: Which specific video inspired this, its channel, and its performance index.\n\nReturn ONLY valid JSON array:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nPROVEN PERFORMERS FROM THE ARCHIVE:\n"+ctx;
     try{
       const res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:promptText})});
       if(!res.ok){setError("API error "+res.status);setLoading(false);return;}
