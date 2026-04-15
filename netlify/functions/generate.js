@@ -4,7 +4,7 @@ export default async (req) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "x-api-key": Netlify.env.get("ANTHROPIC_API_KEY"),
       "anthropic-version": "2023-06-01"
     },
     body: JSON.stringify({
@@ -18,3 +18,5 @@ export default async (req) => {
     headers: { "Content-Type": "application/json" }
   });
 };
+
+export const config = { path: "/api/generate" };
