@@ -334,7 +334,6 @@ export default function App(){
             </div>
             <div style={{fontSize:14,fontWeight:700,color:"#38FC1A",flexShrink:0}}>{v.pi>=100?v.pi.toFixed(0):v.pi.toFixed(1)}x</div>
           </div>)}
-          </div>)}
         </div>}
 
         {canGen&&eps.length===0&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
