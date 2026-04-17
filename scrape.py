@@ -1,11 +1,11 @@
 """
-Geronimo Podcast Scraper v2 — No Shorts
+Geronimo Podcast Scraper v3 — No Shorts, Keyword Tagged
 Only pulls videos 10+ minutes (actual podcast episodes).
+Tags every video with topics and angles using keyword matching.
 
 Usage:
-  pip3 install requests anthropic
+  pip3 install requests
   export YOUTUBE_API_KEY="xxx"
-  export ANTHROPIC_API_KEY="xxx"
   python3 scrape.py
 """
 
@@ -17,12 +17,10 @@ from math import ceil
 import requests
 
 YT_KEY = os.environ.get("YOUTUBE_API_KEY")
-ANTH_KEY = os.environ.get("ANTHROPIC_API_KEY")
 YT = "https://www.googleapis.com/youtube/v3"
 
 CHANNELS = [
     ("@TheDiaryOfACEO", "Diary of a CEO"),
-    ("@ChewTheFatPod", "Chew The Fat Pod"),
     ("@AlexHormozi", "Alex Hormozi"),
     ("@ChrisWillx", "Chris Williamson"),
     ("@hubermanlab", "Andrew Huberman"),
@@ -55,15 +53,15 @@ CHANNELS = [
     ("@PeterDiamandis", "Peter Diamandis"),
     ("@EconomicsExplained", "Economics Explained"),
     ("@TheIcedCoffeeHour", "The Iced Coffee Hour"),
+    ("@ChewTheFatPod", "Chew The Fat Pod"),
 ]
 
 LOOKBACK_DAYS = 730
 MAX_VIDS_PER_CHANNEL = 300
-MIN_DURATION_SECONDS = 600  # 10 minutes minimum
+MIN_DURATION_SECONDS = 600
 
 
 def parse_duration(iso_duration):
-    """Parse ISO 8601 duration (PT1H23M45S) to seconds."""
     if not iso_duration:
         return 0
     match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', iso_duration)
@@ -106,7 +104,6 @@ def get_videos(channel_id, after):
             if pub < after:
                 return videos
             title = s.get("title", "")
-            # Skip obvious shorts from title
             if "#shorts" in title.lower() or "#short" in title.lower():
                 continue
             videos.append({
@@ -114,7 +111,6 @@ def get_videos(channel_id, after):
                 "title": title,
                 "description": s.get("description", "")[:400],
                 "date": pub.strftime("%Y-%m-%d"),
-                "thumbnail": s.get("thumbnails", {}).get("high", {}).get("url", ""),
             })
         npt = d.get("nextPageToken")
         if not npt:
@@ -124,7 +120,6 @@ def get_videos(channel_id, after):
 
 
 def get_stats_and_duration(video_ids):
-    """Get stats AND duration. Returns dict with views, likes, comments, duration_seconds."""
     stats = {}
     for i in range(0, len(video_ids), 50):
         batch = video_ids[i:i + 50]
@@ -146,40 +141,54 @@ def get_stats_and_duration(video_ids):
     return stats
 
 
-def tag_videos(videos):
-    """Tag videos with Claude if ANTHROPIC_API_KEY is set."""
-    if not ANTH_KEY:
-        print("  No ANTHROPIC_API_KEY set — skipping tagging")
-        return {}
-
-    try:
-        from anthropic import Anthropic
-    except ImportError:
-        print("  anthropic package not installed — skipping tagging")
-        return {}
-
-    client = Anthropic(api_key=ANTH_KEY)
-    prompt = """Tag each video. Return ONLY valid JSON array, no markdown.
-TOPICS (1-3): business_growth, mindset, health_fitness, relationships, money, leadership, personal_story, science_research, culture_society, marketing, sales, operations, fitness_industry, coaching, entrepreneurship
-ANGLES (1-2): contrarian_take, personal_vulnerability, how_to_tactical, myth_busting, emotional_hook, transformation_story, data_driven, interview_deep_dive, shock_value, aspirational, behind_the_scenes
-[{"id":"xxx","topics":["t1"],"angles":["a1"],"sum":"One sentence summary"}]
-VIDEOS:
-"""
-    all_tags = {}
-    for i in range(0, len(videos), 15):
-        batch = videos[i:i + 15]
-        txt = "\n".join([f"ID:{v['id']} CH:{v['ch']} TITLE:{v['title']}" for v in batch])
-        try:
-            r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=3000,
-                                       messages=[{"role": "user", "content": prompt + txt}])
-            raw = r.content[0].text.replace("```json", "").replace("```", "").strip()
-            for t in json.loads(raw):
-                all_tags[t["id"]] = t
-        except Exception as e:
-            print(f"    Tag error batch {i // 15 + 1}: {e}")
-        print(f"    Tag batch {i // 15 + 1}/{ceil(len(videos) / 15)} done")
-        time.sleep(0.5)
-    return all_tags
+def keyword_tag(videos):
+    topic_kw = {
+        "business_growth": ["business", "grow", "scale", "revenue", "profit", "company", "startup", "million", "billion", "income", "success", "empire", "wealth"],
+        "mindset": ["mindset", "discipline", "motivation", "habits", "psychology", "brain", "mental", "think", "belief", "confidence", "fear", "anxiety", "stoic", "resilience", "purpose", "meaning", "emotion", "dream", "autopilot"],
+        "health_fitness": ["health", "fitness", "exercise", "workout", "diet", "nutrition", "weight", "fat", "muscle", "body", "sleep", "longevity", "aging", "biohack", "supplement", "protein", "testosterone", "hormone", "gut"],
+        "money": ["money", "finance", "invest", "debt", "savings", "retire", "budget", "wealth", "broke", "rich", "poor", "financial", "stock", "crypto", "economy", "inflation", "tax", "salary", "real estate"],
+        "leadership": ["leader", "leadership", "team", "manage", "culture", "hire", "CEO", "founder", "boss", "employee"],
+        "marketing": ["marketing", "ads", "advertising", "content", "social media", "brand", "viral", "audience", "algorithm", "youtube", "instagram", "tiktok", "SEO", "attention"],
+        "sales": ["sales", "sell", "selling", "close", "pitch", "offer", "conversion", "customer", "client", "deal"],
+        "operations": ["systems", "automate", "process", "operations", "efficiency", "delegate", "outsource", "SOP"],
+        "fitness_industry": ["gym", "studio", "trainer", "PT", "personal train", "CrossFit", "F45", "boutique", "fitness business", "group fitness"],
+        "coaching": ["coach", "coaching", "mentor", "consulting", "advisory"],
+        "personal_story": ["story", "journey", "lost everything", "rebuilt", "failed", "bankruptcy", "truth about", "my life", "struggle", "overcame", "quitting", "gave up", "roadblock"],
+        "relationships": ["relationship", "marriage", "dating", "love", "partner", "divorce", "family", "friendship", "lonely", "loneliness", "men", "women"],
+        "culture_society": ["society", "culture", "generation", "gender", "politics", "crisis", "epidemic", "modern", "world", "america", "war", "AI", "technology", "future"],
+        "science_research": ["science", "research", "study", "neuroscience", "data", "evidence", "protocol", "dopamine", "cortisol", "brain", "surgeon", "doctor", "dr"],
+        "entrepreneurship": ["entrepreneur", "startup", "founder", "built", "start a business", "side hustle", "quit your job", "self-employed", "acquisition"],
+    }
+    angle_kw = {
+        "contrarian_take": ["lie", "lying", "wrong", "myth", "stop", "don't", "never", "truth", "actually", "secret", "nobody tells", "overrated", "unpopular"],
+        "how_to_tactical": ["how to", "step", "strategy", "framework", "system", "hack", "tip", "rule", "method", "way to", "guide", "blueprint", "playbook", "unlock", "build"],
+        "emotional_hook": ["cry", "depressed", "depression", "lonely", "lost", "struggle", "pain", "dark", "honest", "vulnerable", "broke down", "died", "death", "grief", "roadblock"],
+        "transformation_story": ["transformed", "went from", "changed my life", "journey", "turnaround", "before", "after", "comeback", "transform"],
+        "data_driven": ["data", "research", "study", "science", "number", "statistic", "percent", "evidence", "experiment"],
+        "myth_busting": ["myth", "lie", "debunk", "wrong", "actually", "truth about", "stop believing"],
+        "shock_value": ["broke", "insane", "crazy", "shocking", "unbelievable", "controversial", "banned", "fired", "scam", "fraud", "exposed", "storm"],
+        "interview_deep_dive": ["interview", "conversation", "sits down", "opens up", "tells all", "exclusive", "finally", "first time", "feat"],
+        "behind_the_scenes": ["behind the scenes", "inside", "day in", "routine", "how I", "my process", "real life", "tour"],
+        "aspirational": ["millionaire", "billionaire", "empire", "dream", "freedom", "lifestyle", "luxury", "successful", "$", "wealth beyond"],
+        "personal_vulnerability": ["opens up", "honest", "vulnerable", "struggle", "depression", "anxiety", "fear", "admit", "alone", "friendship", "loneliness"],
+    }
+    tagged = 0
+    for v in videos:
+        tl = v.get("title", "").lower()
+        scores = {}
+        for topic, kws in topic_kw.items():
+            s = sum(1 for kw in kws if kw.lower() in tl)
+            if s > 0:
+                scores[topic] = s
+        v["topics"] = sorted(scores, key=scores.get, reverse=True)[:2] if scores else ["business_growth"]
+        ascores = {}
+        for angle, kws in angle_kw.items():
+            s = sum(1 for kw in kws if kw.lower() in tl)
+            if s > 0:
+                ascores[angle] = s
+        v["angles"] = sorted(ascores, key=ascores.get, reverse=True)[:2] if ascores else ["interview_deep_dive"]
+        tagged += 1
+    print(f"  Keyword-tagged {tagged} videos")
 
 
 def main():
@@ -191,7 +200,7 @@ def main():
     all_videos = []
 
     print(f"\n{'=' * 60}")
-    print(f"GERONIMO PODCAST SCRAPER v2 (No Shorts)")
+    print(f"GERONIMO PODCAST SCRAPER v3 (No Shorts, Keyword Tagged)")
     print(f"Channels: {len(CHANNELS)} | Lookback: {LOOKBACK_DAYS} days")
     print(f"Min duration: {MIN_DURATION_SECONDS // 60} minutes")
     print(f"{'=' * 60}\n")
@@ -209,7 +218,6 @@ def main():
             print(f"  No videos found")
             continue
 
-        # Get stats AND duration
         ids = [v["id"] for v in videos]
         stats = get_stats_and_duration(ids)
 
@@ -221,26 +229,21 @@ def main():
             v["duration_seconds"] = s.get("duration_seconds", 0)
             v["ch"] = name
 
-        # FILTER: Remove shorts and short videos (under 10 minutes)
         before_count = len(videos)
         videos = [v for v in videos if v["duration_seconds"] >= MIN_DURATION_SECONDS]
         shorts_removed = before_count - len(videos)
-
-        # Filter out zero-view videos
         videos = [v for v in videos if v["views"] > 0]
 
         if not videos:
             print(f"  No long-form videos found (removed {shorts_removed} shorts/short videos)")
             continue
 
-        # Calculate performance index
         view_counts = [v["views"] for v in videos]
         med = median(view_counts) if view_counts else 1
         for v in videos:
             v["med"] = round(med)
             v["pi"] = round(v["views"] / med, 2) if med > 0 else 0
 
-        # Keep only above-median performers
         top = [v for v in videos if v["pi"] >= 1.5]
         top.sort(key=lambda x: x["pi"], reverse=True)
         top = top[:20]
@@ -249,38 +252,25 @@ def main():
         all_videos.extend(top)
 
     print(f"\n{'=' * 60}")
-    print(f"Total podcast episodes to process: {len(all_videos)}")
+    print(f"Total podcast episodes: {len(all_videos)}")
     print(f"{'=' * 60}\n")
 
-    # Tag with Claude
-    if all_videos:
-        print("Tagging with Claude...")
-        tags = tag_videos(all_videos)
-        for v in all_videos:
-            t = tags.get(v["id"], {})
-            v["topics"] = t.get("topics", [])
-            v["angles"] = t.get("angles", [])
-            if t.get("sum"):
-                v["sum"] = t["sum"]
-            else:
-                v["sum"] = v["title"]
-
-    # Clean up for output
     output = []
     for v in all_videos:
         output.append({
             "id": v["id"],
             "ch": v["ch"],
             "title": v["title"],
-            "sum": v.get("sum", v["title"]),
+            "sum": v["title"],
             "date": v["date"],
             "views": v["views"],
             "med": v["med"],
             "pi": v["pi"],
-            "topics": v.get("topics", []),
-            "angles": v.get("angles", []),
+            "topics": [],
+            "angles": [],
         })
 
+    keyword_tag(output)
     output.sort(key=lambda x: x["pi"], reverse=True)
 
     with open("data.json", "w") as f:
@@ -288,7 +278,7 @@ def main():
 
     print(f"\n{'=' * 60}")
     print(f"DONE — {len(output)} podcast episodes written to data.json")
-    print(f"(All videos are 10+ minutes — no Shorts)")
+    print(f"(All videos are 10+ minutes, keyword tagged, no Shorts)")
     print(f"{'=' * 60}")
 
 
