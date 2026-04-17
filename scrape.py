@@ -22,6 +22,7 @@ YT = "https://www.googleapis.com/youtube/v3"
 
 CHANNELS = [
     ("@TheDiaryOfACEO", "Diary of a CEO"),
+    ("@ChewTheFatPod", "Chew The Fat Pod"),
     ("@AlexHormozi", "Alex Hormozi"),
     ("@ChrisWillx", "Chris Williamson"),
     ("@hubermanlab", "Andrew Huberman"),
