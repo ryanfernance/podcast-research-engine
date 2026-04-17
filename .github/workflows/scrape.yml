@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -15,11 +17,11 @@ jobs:
       - run: python scrape.py
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-      - run: mv data.json public/data.json
       - run: |
           git config user.name "Scraper Bot"
           git config user.email "bot@geronimo.com"
-          git pull --rebase origin main
+          mv data.json public/data.json
           git add public/data.json
           git diff --staged --quiet || git commit -m "Update data"
+          git pull --rebase origin main
           git push
