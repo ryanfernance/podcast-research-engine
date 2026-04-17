@@ -171,14 +171,12 @@ function DozaBrief({sel,eps,gName,gDesc,gBg,intContext,isInt,onClose,DATA}){
 function smartMatch(DATA, gName, gDesc, gBg, gTopics, seed) {
   var allText = (gName + " " + gDesc + " " + gBg).toLowerCase();
   var words = allText.split(/\s+/).filter(function(w){return w.length > 3 && !["this","that","with","from","they","their","have","been","will","would","about","which","there","these","those","other","into","also","than","more","some","very","just","when","what","really","people","every","thing","make","know","want","like","good","best","most","over","only","back","first","years","could","should","being","after","going","through","doing","still","getting","around"].includes(w)});
-  var rng = seed || 0;
   var scored = DATA.map(function(v) {
     var title = v.title.toLowerCase();
     var topicMatch = gTopics.length > 0 ? ((v.topics || []).some(function(t){return gTopics.includes(t)}) ? 4 : -2) : 0;
     var wordMatch = words.reduce(function(acc, w){return acc + (title.includes(w) ? 1.5 : 0)}, 0);
-    var piBonus = Math.min(v.pi * 0.03, 1.5);
-    var noise = ((rng * 9301 + 49297) % 233280) / 233280 * 1.2;
-    rng = (rng * 9301 + 49297) % 233280;
+    var piBonus = Math.min(v.pi * 0.02, 1);
+    var noise = Math.random() * 3;
     return { v: v, score: topicMatch + wordMatch + piBonus + noise };
   });
   if(gTopics.length > 0){
