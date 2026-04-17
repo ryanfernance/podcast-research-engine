@@ -317,7 +317,7 @@ export default function App(){
 
         <div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
           <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>TOPIC FILTERS <span style={{color:"#D1D5DB",fontWeight:400}}>(optional)</span></div>
-          <div style={{fontSize:12,color:"#9CA3AF",marginBottom:12}}>Matches against all {DATA.length} episodes using the guest background. Topics help refine further.</div>
+          <div style={{fontSize:12,color:"#9CA3AF",marginBottom:12}}>Matches against all {DATA.length} episodes using {isInt?"your topic context":"the guest background"}. Topics help refine further.</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {TOPICS.map(t=>{var on=gTopics.includes(t);var c=TC[t]||{bg:"#F3F4F6",t:"#374151"};
               return <button key={t} onClick={()=>toggleTopic(t)} style={{padding:"8px 16px",borderRadius:8,border:on?"none":"1px solid #E5E7EB",background:on?c.bg:"#FFF",color:on?c.t:"#9CA3AF",fontSize:13,fontWeight:on?600:500,cursor:"pointer",outline:"none",transition:"all 0.15s",textTransform:"capitalize"}}>{t.replace(/_/g," ")}</button>})}
@@ -326,13 +326,14 @@ export default function App(){
 
         {matched.length>0&&<div style={{marginBottom:20}}>
           <div style={{fontSize:11,color:"#D1D5DB",fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>{matched.length} BEST MATCHES FROM {DATA.length} EPISODES</div>
-          {matched.slice(0,6).map(v=><div key={v.id} style={{background:"#FFF",borderRadius:10,padding:"10px 14px",marginBottom:8,display:"flex",gap:12,alignItems:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.03)"}}>
-            <div style={{flex:"0 0 60px",height:40,borderRadius:8,overflow:"hidden",position:"relative",background:"#F3F4F6"}}><Thumb id={v.id} ch={v.ch}/></div>
+          {matched.slice(0,isInt?12:6).map(v=><div key={v.id} onClick={()=>window.open("https://youtube.com/watch?v="+v.id,"_blank")} style={{background:"#FFF",borderRadius:10,padding:isInt?"12px 14px":"10px 14px",marginBottom:8,display:"flex",gap:12,alignItems:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.03)",cursor:"pointer",transition:"all 0.2s",border:"1px solid transparent"}} onMouseEnter={e=>e.currentTarget.style.borderColor="#E5E7EB"} onMouseLeave={e=>e.currentTarget.style.borderColor="transparent"}>
+            <div style={{flex:"0 0 80px",height:isInt?52:40,borderRadius:8,overflow:"hidden",position:"relative",background:"#F3F4F6"}}><Thumb id={v.id} ch={v.ch}/></div>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:600,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.title}</div>
-              <div style={{fontSize:11,color:"#9CA3AF"}}>{v.ch}</div>
+              <div style={{fontSize:13,fontWeight:600,color:"#111",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:isInt?"normal":"nowrap",display:isInt?"-webkit-box":"block",WebkitLineClamp:isInt?2:1,WebkitBoxOrient:"vertical"}}>{v.title}</div>
+              <div style={{fontSize:11,color:"#9CA3AF",marginTop:2}}>{v.ch}{isInt?" · "+fmt(v.views)+" views · "+v.date.slice(0,7):""}</div>
             </div>
-            <div style={{fontSize:14,fontWeight:700,color:"#38FC1A"}}>{v.pi>=100?v.pi.toFixed(0):v.pi.toFixed(1)}x</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#38FC1A",flexShrink:0}}>{v.pi>=100?v.pi.toFixed(0):v.pi.toFixed(1)}x</div>
+          </div>)}
           </div>)}
         </div>}
 
