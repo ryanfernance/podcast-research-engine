@@ -11,7 +11,8 @@ body{background:#FAFAF9;font-family:'DM Sans',sans-serif;color:#111}
 .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
 .vcard{background:#FFF;border-radius:14px;overflow:hidden;transition:all 0.35s cubic-bezier(0.19,1,0.22,1);cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.04),0 1px 3px rgba(0,0,0,0.02)}
 .vcard:hover{transform:translateY(-6px);box-shadow:0 20px 50px rgba(0,0,0,0.08),0 8px 20px rgba(0,0,0,0.04)}
-.pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:600;font-family:'DM Sans',sans-serif}
+.pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.15s}
+.pill:hover{opacity:0.8}
 .fi{padding:10px 16px;border-radius:10px;border:1px solid #E5E7EB;background:#FFF;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;color:#111;transition:border 0.2s,box-shadow 0.2s}
 .fi:focus{border-color:#38FC1A;box-shadow:0 0 0 3px rgba(56,252,26,0.1)}
 .fs{padding:10px 14px;border-radius:10px;border:1px solid #E5E7EB;background:#FFF;font-size:12px;font-family:'DM Sans',sans-serif;color:#6B7280;cursor:pointer;outline:none}
@@ -19,6 +20,8 @@ body{background:#FAFAF9;font-family:'DM Sans',sans-serif;color:#111}
 .gbtn{padding:16px 32px;border-radius:12px;border:none;background:#000;color:#38FC1A;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;width:100%;transition:all 0.25s}
 .gbtn:hover{box-shadow:0 8px 24px rgba(0,0,0,0.15);transform:translateY(-1px)}
 .gbtn:disabled{background:#F3F4F6;color:#9CA3AF;cursor:wait;transform:none;box-shadow:none}
+.rbtn{padding:10px 20px;border-radius:10px;border:1px solid #E5E7EB;background:#FFF;color:#6B7280;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.2s}
+.rbtn:hover{border-color:#38FC1A;color:#111}
 .epc{background:#FFF;border-radius:12px;border:1px solid #E5E7EB;padding:20px 24px;transition:all 0.2s;position:relative}
 .epc:hover{border-color:#D1D5DB}
 .epc.on{border:2px solid #38FC1A;background:#F0FDF4}
@@ -26,7 +29,7 @@ body{background:#FAFAF9;font-family:'DM Sans',sans-serif;color:#111}
 .ta:focus{border-color:#38FC1A;box-shadow:0 0 0 3px rgba(56,252,26,0.1)}
 `;
 
-function Pill({t}){const c=TC[t]||{bg:"#F3F4F6",t:"#374151"};return <span className="pill" style={{background:c.bg,color:c.t}}>{t.replace(/_/g," ")}</span>;}
+function Pill({t,onClick,active}){var c=TC[t]||{bg:"#F3F4F6",t:"#374151"};return <span className="pill" onClick={onClick} style={{background:active?c.t:c.bg,color:active?"#FFF":c.t,border:active?"1px solid "+c.t:"1px solid transparent"}}>{t.replace(/_/g," ")}</span>;}
 
 function Thumb({id,ch}){
   const [err,setErr]=useState(false);
@@ -40,8 +43,8 @@ function Thumb({id,ch}){
   </>;
 }
 
-function VCard({v,i}){
-  const bg=v.pi>=10?"#DC2626":v.pi>=5?"#000":"#38FC1A";
+function VCard({v,i,onTopicClick}){
+  var bg=v.pi>=10?"#DC2626":v.pi>=5?"#000":"#38FC1A";
   return <div className="vcard" onClick={()=>window.open(`https://youtube.com/watch?v=${v.id}`,"_blank")} style={{animation:`fadeUp 0.4s ease ${Math.min(i*0.03,0.6)}s both`}}>
     <div style={{position:"relative",paddingTop:"56.25%",background:"#F3F4F6",overflow:"hidden"}}>
       <Thumb id={v.id} ch={v.ch}/>
@@ -55,16 +58,18 @@ function VCard({v,i}){
     <div style={{padding:"14px 16px 16px"}}>
       <h3 style={{fontSize:15,fontWeight:600,lineHeight:1.35,color:"#111",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{v.title}</h3>
       <div style={{display:"flex",gap:16,margin:"12px 0 10px"}}>
-        {[{l:"Views",v:fmt(v.views),c:"#111"},{l:"Median",v:fmt(v.med),c:"#9CA3AF"},{l:"Date",v:v.date?.slice(0,7)||"",c:"#D1D5DB"}].map(s=>
+        {[{l:"Views",v:fmt(v.views),c:"#111"},{l:"Median",v:fmt(v.med),c:"#9CA3AF"},{l:"Date",v:v.date?.slice(0,10)||"",c:"#D1D5DB"}].map(s=>
           <div key={s.l}><div style={{fontSize:10,color:"#9CA3AF",fontWeight:500,marginBottom:2}}>{s.l}</div><div style={{fontSize:14,fontWeight:700,color:s.c}}>{s.v}</div></div>)}
       </div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:4}}>{(v.topics||[]).map(t=><Pill key={t} t={t}/>)}</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:4}} onClick={e=>e.stopPropagation()}>{(v.topics||[]).map(t=><Pill key={t} t={t} onClick={()=>onTopicClick&&onTopicClick(t)}/>)}</div>
     </div>
   </div>;
 }
 
-function EpCard({ep,i,on,toggle}){
+function EpCard({ep,i,on,toggle,DATA}){
   const [open,setOpen]=useState(false);
+  var srcVid=null;
+  if(ep.source_id&&DATA){srcVid=DATA.find(function(v){return v.id===ep.source_id})}
   return <div className={`epc ${on?"on":""}`}>
     <div onClick={toggle} style={{cursor:"pointer"}}>
       {on&&<div style={{position:"absolute",top:16,right:16,width:26,height:26,borderRadius:8,background:"#38FC1A",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:15,fontWeight:700}}>&#10003;</div>}
@@ -72,8 +77,16 @@ function EpCard({ep,i,on,toggle}){
       <h3 style={{fontSize:18,fontWeight:700,color:"#111",lineHeight:1.35,paddingRight:on?36:0,marginBottom:8}}>{ep.title}</h3>
       <p style={{fontSize:14,color:"#6B7280",lineHeight:1.55,marginBottom:8}}>{ep.hook||ep.angle||""}</p>
       {ep.why_it_works&&<p style={{fontSize:13,color:"#9CA3AF",lineHeight:1.5,marginBottom:10}}>{ep.why_it_works}</p>}
-      <p style={{fontSize:12,color:"#D1D5DB",fontStyle:"italic"}}>{ep.source||ep.inspired||""}</p>
     </div>
+    {srcVid&&<div onClick={()=>window.open("https://youtube.com/watch?v="+srcVid.id,"_blank")} style={{display:"flex",gap:10,alignItems:"center",background:"#FAFAFA",borderRadius:8,padding:"8px 12px",marginTop:8,cursor:"pointer",border:"1px solid #F3F4F6"}}>
+      <div style={{flex:"0 0 64px",height:40,borderRadius:6,overflow:"hidden",position:"relative",background:"#E5E7EB"}}><Thumb id={srcVid.id} ch={srcVid.ch}/></div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.04em"}}>PULLED FROM</div>
+        <div style={{fontSize:12,fontWeight:600,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{srcVid.title}</div>
+        <div style={{fontSize:10,color:"#9CA3AF"}}>{srcVid.ch} · {srcVid.pi}x · {fmt(srcVid.views)} views</div>
+      </div>
+    </div>}
+    {!srcVid&&ep.source&&<p style={{fontSize:12,color:"#D1D5DB",fontStyle:"italic",marginTop:8}}>{ep.source||ep.inspired||""}</p>}
     {(ep.beats||ep.opening)&&<div style={{marginTop:12}}>
       <button onClick={(e)=>{e.stopPropagation();setOpen(!open)}} style={{fontSize:12,color:"#38FC1A",fontWeight:600,background:"none",border:"none",cursor:"pointer",padding:0}}>{open?"Hide details ":"Show beats & opening "}{open?"\u25B2":"\u25BC"}</button>
       {open&&<div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #F3F4F6"}}>
@@ -93,8 +106,8 @@ function EpCard({ep,i,on,toggle}){
   </div>;
 }
 
-function DozaBrief({sel,eps,gName,gDesc,gBg,intContext,isInt,onClose}){
-  const picked=eps.filter((_,i)=>sel.includes(i));
+function DozaBrief({sel,eps,gName,gDesc,gBg,intContext,isInt,onClose,DATA}){
+  var picked=eps.filter(function(_,i){return sel.includes(i)});
   return <div style={{position:"fixed",inset:0,zIndex:100,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(12px)"}} onClick={onClose}>
     <div style={{background:"#FFF",borderRadius:20,maxWidth:760,width:"100%",maxHeight:"90vh",overflow:"auto",padding:36,position:"relative",boxShadow:"0 32px 80px rgba(0,0,0,0.12)",animation:"fadeUp 0.3s ease"}} onClick={e=>e.stopPropagation()}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:20,background:"#F3F4F6",border:"none",width:32,height:32,borderRadius:8,fontSize:16,color:"#9CA3AF",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>&#10005;</button>
@@ -116,7 +129,10 @@ function DozaBrief({sel,eps,gName,gDesc,gBg,intContext,isInt,onClose}){
         <p style={{fontSize:15,color:"#374151",lineHeight:1.55}}><strong style={{color:"#111"}}>{gName}</strong> — {gDesc}</p>
         {gBg&&<p style={{fontSize:13,color:"#6B7280",lineHeight:1.5,marginTop:8}}>{gBg}</p>}
       </div>}
-      {picked.map((ep,i)=><div key={i} style={{background:"#FAFAFA",borderRadius:14,padding:24,marginBottom:20}}>
+      {picked.map(function(ep,i){
+        var srcVid=null;
+        if(ep.source_id&&DATA){srcVid=DATA.find(function(v){return v.id===ep.source_id})}
+        return <div key={i} style={{background:"#FAFAFA",borderRadius:14,padding:24,marginBottom:20}}>
         <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>CONCEPT {i+1}</div>
         <h3 style={{fontSize:22,fontWeight:700,color:"#111",lineHeight:1.3,marginBottom:6}}>{ep.title}</h3>
         <p style={{fontSize:15,color:"#4B5563",lineHeight:1.55,marginBottom:6}}>{ep.hook||ep.angle||""}</p>
@@ -124,42 +140,56 @@ function DozaBrief({sel,eps,gName,gDesc,gBg,intContext,isInt,onClose}){
           <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:4}}>WHY IT WORKS</div>
           <p style={{fontSize:14,color:"#374151",lineHeight:1.55}}>{ep.why_it_works}</p>
         </div>}
+        {srcVid&&<div style={{display:"flex",gap:10,alignItems:"center",background:"#FFF",borderRadius:8,padding:"10px 14px",marginBottom:16,border:"1px solid #E5E7EB"}}>
+          <div style={{flex:"0 0 72px",height:46,borderRadius:6,overflow:"hidden",position:"relative",background:"#E5E7EB"}}><Thumb id={srcVid.id} ch={srcVid.ch}/></div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,color:"#38FC1A",fontWeight:700}}>PULLED FROM</div>
+            <div style={{fontSize:13,fontWeight:600,color:"#111"}}>{srcVid.title}</div>
+            <div style={{fontSize:11,color:"#9CA3AF"}}>{srcVid.ch} · {srcVid.pi}x · {fmt(srcVid.views)} views</div>
+          </div>
+        </div>}
         {ep.opening&&<div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>OPENING</div>
           <p style={{fontSize:15,color:"#374151",lineHeight:1.6,fontStyle:"italic",background:"#FFF",padding:16,borderRadius:10,borderLeft:"3px solid #38FC1A"}}>{ep.opening}</p>
         </div>}
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>BEATS TO HIT</div>
-          {(ep.beats||ep.points||[]).map((p,j)=><div key={j} style={{display:"flex",gap:12,marginBottom:10}}>
+          {(ep.beats||ep.points||[]).map(function(p,j){return <div key={j} style={{display:"flex",gap:12,marginBottom:10}}>
             <span style={{flex:"0 0 28px",height:28,borderRadius:8,background:"#000",color:"#38FC1A",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{j+1}</span>
             <p style={{fontSize:15,color:"#374151",lineHeight:1.55,paddingTop:3}}>{p}</p>
-          </div>)}
+          </div>})}
         </div>
-        <div style={{background:"#FFF",borderRadius:10,padding:16}}>
+        {!srcVid&&ep.source&&<div style={{background:"#FFF",borderRadius:10,padding:16}}>
           <div style={{fontSize:11,color:"#D1D5DB",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>PRE-VALIDATED BY</div>
-          <p style={{fontSize:13,color:"#9CA3AF",fontStyle:"italic",lineHeight:1.55}}>{ep.source||ep.inspired||""}</p>
-        </div>
-      </div>)}
+          <p style={{fontSize:13,color:"#9CA3AF",fontStyle:"italic",lineHeight:1.55}}>{ep.source||""}</p>
+        </div>}
+      </div>})}
     </div>
   </div>;
 }
 
-function smartMatch(DATA, gName, gDesc, gBg, gTopics) {
+function smartMatch(DATA, gName, gDesc, gBg, gTopics, seed) {
   var allText = (gName + " " + gDesc + " " + gBg).toLowerCase();
-  var words = allText.split(/\s+/).filter(function(w){return w.length > 3 && !["this","that","with","from","they","their","have","been","will","would","about","which","there","these","those","other","into","also","than","more","some","very","just","when","what"].includes(w)});
+  var words = allText.split(/\s+/).filter(function(w){return w.length > 3 && !["this","that","with","from","they","their","have","been","will","would","about","which","there","these","those","other","into","also","than","more","some","very","just","when","what","really","people","every","thing","make","know","want","like","good","best","most","over","only","back","first","years","could","should","being","after","going","through","doing","still","getting","around"].includes(w)});
+  var rng = seed || 0;
   var scored = DATA.map(function(v) {
     var title = v.title.toLowerCase();
-    var topicMatch = (v.topics || []).some(function(t){return gTopics.includes(t)}) ? 3 : 0;
+    var topicMatch = gTopics.length > 0 ? ((v.topics || []).some(function(t){return gTopics.includes(t)}) ? 4 : -2) : 0;
     var wordMatch = words.reduce(function(acc, w){return acc + (title.includes(w) ? 1.5 : 0)}, 0);
-    var piBonus = Math.min(v.pi * 0.05, 2);
-    return { v: v, score: topicMatch + wordMatch + piBonus };
+    var piBonus = Math.min(v.pi * 0.03, 1.5);
+    var noise = ((rng * 9301 + 49297) % 233280) / 233280 * 1.2;
+    rng = (rng * 9301 + 49297) % 233280;
+    return { v: v, score: topicMatch + wordMatch + piBonus + noise };
   });
+  if(gTopics.length > 0){
+    scored = scored.filter(function(s){return (s.v.topics||[]).some(function(t){return gTopics.includes(t)})});
+  }
   scored.sort(function(a, b){return b.score - a.score});
   var seen = {};
   var results = [];
-  for (var i = 0; i < scored.length && results.length < 12; i++) {
+  for (var i = 0; i < scored.length && results.length < 40; i++) {
     var ch = scored[i].v.ch;
-    if (!seen[ch] || seen[ch] < 2) {
+    if (!seen[ch] || seen[ch] < 3) {
       results.push(scored[i].v);
       seen[ch] = (seen[ch] || 0) + 1;
     }
@@ -187,17 +217,19 @@ export default function App(){
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
   const [showBrief,setShowBrief]=useState(false);
+  const [matchSeed,setMatchSeed]=useState(1);
+  const [matchPage,setMatchPage]=useState(0);
 
   useEffect(()=>{
     fetch("/data.json").then(r=>r.json()).then(d=>{setDATA(d);setLoadingData(false)}).catch(()=>setLoadingData(false));
   },[]);
 
-  const CHANNELS=useMemo(()=>[...new Set(DATA.map(v=>v.ch))].sort(),[DATA]);
-  const TOPICS=useMemo(()=>[...new Set(DATA.flatMap(v=>v.topics||[]))].sort(),[DATA]);
+  var CHANNELS=useMemo(function(){return[...new Set(DATA.map(v=>v.ch))].sort()},[DATA]);
+  var TOPICS=useMemo(function(){return[...new Set(DATA.flatMap(v=>v.topics||[]))].sort()},[DATA]);
 
-  const filtered=useMemo(()=>{
-    let d=[...DATA];
-    if(q){const lq=q.toLowerCase();d=d.filter(v=>v.title.toLowerCase().includes(lq)||v.ch.toLowerCase().includes(lq));}
+  var filtered=useMemo(function(){
+    var d=[...DATA];
+    if(q){var lq=q.toLowerCase();d=d.filter(v=>v.title.toLowerCase().includes(lq)||v.ch.toLowerCase().includes(lq));}
     if(fCh!=="all")d=d.filter(v=>v.ch===fCh);
     if(fTp!=="all")d=d.filter(v=>(v.topics||[]).includes(fTp));
     if(sort==="pi")d.sort((a,b)=>b.pi-a.pi);
@@ -206,27 +238,33 @@ export default function App(){
     return d;
   },[DATA,q,fCh,fTp,sort]);
 
-  const matched=useMemo(()=>{
+  var allMatched=useMemo(function(){
     if(isInt){
       if(!intContext && gTopics.length===0) return [];
-      return smartMatch(DATA, "", intContext, intContext, gTopics);
+      return smartMatch(DATA, "", intContext, intContext, gTopics, matchSeed);
     }
     if(!gName && !gBg && gTopics.length===0) return [];
-    return smartMatch(DATA, gName, gDesc, gBg, gTopics);
-  },[DATA,gName,gDesc,gBg,gTopics,isInt,intContext]);
+    return smartMatch(DATA, gName, gDesc, gBg, gTopics, matchSeed);
+  },[DATA,gName,gDesc,gBg,gTopics,isInt,intContext,matchSeed]);
 
-  const toggleTopic=t=>{setGTopics(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t]);setEps([]);setSel([]);};
-  const toggleSel=i=>setSel(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i]);
+  var matched = allMatched.slice(matchPage*20, matchPage*20+20);
+  var totalPages = Math.ceil(allMatched.length/20);
 
-  const generate=async()=>{
+  var toggleTopic=function(t){setGTopics(function(p){return p.includes(t)?p.filter(function(x){return x!==t}):[...p,t]});setEps([]);setSel([]);setMatchPage(0);};
+  var toggleSel=function(i){setSel(function(p){return p.includes(i)?p.filter(function(x){return x!==i}):[...p,i]})};
+
+  var rematch=function(){setMatchSeed(function(s){return s+1});setMatchPage(0);setEps([]);setSel([])};
+
+  var generate=async function(){
     setLoading(true);setError("");setEps([]);setSel([]);
-    var ctx=matched.slice(0,5).map(v=>"- \""+v.title+"\" ("+v.ch+", "+v.pi+"x)").join("\n");
+    var top8=matched.slice(0,8);
+    var ctx=top8.map(function(v){return "- ["+v.id+"] \""+v.title+"\" ("+v.ch+", "+v.pi+"x)"}).join("\n");
     var refBlock=customRef?"\nOutlier ref: "+customRef.slice(0,200):"";
     var promptText="";
     if(isInt){
-      promptText="Geronimo Unfiltered Podcast. Host: Doza, a straight-talking business operator.\n\nDoza wants to record an INTERNAL episode (no guest) about this topic:\n"+intContext.slice(0,300)+"\n\nBelow are proven videos on related themes. Study WHY they worked (the tension, the contrarian angle, the hook) and apply those PATTERNS to Doza's take on this topic. Doza speaks from lived experience as an operator. Make it authentic to him.\n\n5 concepts. JSON only, no other text:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
+      promptText="Geronimo Unfiltered Podcast. Host: Doza, a straight-talking business operator.\n\nDoza wants to record an INTERNAL episode (no guest) about this topic:\n"+intContext.slice(0,300)+"\n\nBelow are proven videos on related themes. Study WHY they worked and apply those PATTERNS to Doza's take. Each concept MUST reference which specific video it was pulled from using the [ID] in brackets.\n\n5 concepts. JSON only, no other text. Include source_id field with the video ID in brackets:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\",\"source_id\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
     }else{
-      promptText="Geronimo Unfiltered Podcast. Host: Doza.\n\nGuest: "+gName+" ("+gDesc+")\nBio: "+gBg.slice(0,300)+"\n\nBelow are proven videos that performed well. DO NOT copy their topics. Study WHY they worked (the tension, the vulnerability, the contrarian angle, the specificity) and apply those PATTERNS to this guest's real background. Every concept must be authentically rooted in who this guest is and what they've actually done.\n\n5 concepts. JSON only, no other text:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
+      promptText="Geronimo Unfiltered Podcast. Host: Doza.\n\nGuest: "+gName+" ("+gDesc+")\nBio: "+gBg.slice(0,300)+"\n\nBelow are proven videos. DO NOT copy their topics. Study WHY they worked and apply those PATTERNS to this guest's real background. Each concept MUST reference which specific video it was pulled from using the [ID] in brackets.\n\n5 concepts. JSON only, no other text. Include source_id field with the video ID in brackets:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\",\"source_id\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
     }
     try{
       var res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:promptText})});
@@ -239,7 +277,7 @@ export default function App(){
     setLoading(false);
   };
 
-  var canGen=isInt?(intContext||gTopics.length>0)&&matched.length>0:gName&&gBg&&matched.length>0;
+  var canGen=isInt?(intContext||gTopics.length>0)&&allMatched.length>0:gName&&gBg&&allMatched.length>0;
 
   if(loadingData)return <div style={{minHeight:"100vh",background:"#FAFAF9",display:"flex",alignItems:"center",justifyContent:"center"}}>
     <div style={{textAlign:"center"}}>
@@ -253,7 +291,7 @@ export default function App(){
   return <div style={{minHeight:"100vh",background:"#FAFAF9"}}>
     <style>{CSS}</style>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet"/>
-    {showBrief&&<DozaBrief sel={sel} eps={eps} gName={gName} gDesc={gDesc} gBg={gBg} intContext={intContext} isInt={isInt} onClose={()=>setShowBrief(false)}/>}
+    {showBrief&&<DozaBrief sel={sel} eps={eps} gName={gName} gDesc={gDesc} gBg={gBg} intContext={intContext} isInt={isInt} onClose={()=>setShowBrief(false)} DATA={DATA}/>}
 
     <div style={{background:"#000",padding:"18px 28px"}}>
       <div style={{maxWidth:1320,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
@@ -284,20 +322,24 @@ export default function App(){
 
     <div style={{maxWidth:1320,margin:"0 auto",padding:"28px 28px 80px"}}>
       {tab==="library"&&<>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",marginBottom:24}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",marginBottom:16}}>
           <input className="fi" placeholder="Search episodes..." value={q} onChange={e=>setQ(e.target.value)} style={{flex:"1 1 180px",maxWidth:280}}/>
           <select className="fs" value={fCh} onChange={e=>setFCh(e.target.value)}><option value="all">All channels</option>{CHANNELS.map(c=><option key={c} value={c}>{c}</option>)}</select>
           <select className="fs" value={fTp} onChange={e=>setFTp(e.target.value)}><option value="all">All topics</option>{TOPICS.map(t=><option key={t} value={t}>{t.replace(/_/g," ")}</option>)}</select>
           <select className="fs" value={sort} onChange={e=>setSort(e.target.value)}><option value="pi">Performance</option><option value="views">Views</option><option value="date">Recent</option></select>
           <span style={{fontSize:13,color:"#D1D5DB",fontWeight:500}}>{filtered.length} episodes</span>
         </div>
-        <div className="card-grid">{filtered.map((v,i)=><VCard key={v.id} v={v} i={i}/>)}</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:20}}>
+          {TOPICS.map(t=><Pill key={t} t={t} active={fTp===t} onClick={()=>setFTp(fTp===t?"all":t)}/>)}
+          {fTp!=="all"&&<span onClick={()=>setFTp("all")} style={{fontSize:12,color:"#9CA3AF",cursor:"pointer",padding:"4px 12px",display:"flex",alignItems:"center"}}>Clear filter</span>}
+        </div>
+        <div className="card-grid">{filtered.map((v,i)=><VCard key={v.id} v={v} i={i} onTopicClick={t=>setFTp(fTp===t?"all":t)}/>)}</div>
       </>}
 
       {tab==="builder"&&<div style={{maxWidth:720,margin:"0 auto"}}>
         <div style={{display:"inline-flex",background:"#F3F4F6",borderRadius:12,padding:4,marginBottom:28}}>
           {[{v:false,l:"Guest Episode"},{v:true,l:"Internal Team"}].map(o=>
-            <button key={o.l} onClick={()=>{setIsInt(o.v);setEps([]);setSel([]);}} style={{padding:"10px 24px",border:"none",borderRadius:10,background:isInt===o.v?"#000":"transparent",color:isInt===o.v?"#38FC1A":"#9CA3AF",fontWeight:600,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>{o.l}</button>)}
+            <button key={o.l} onClick={()=>{setIsInt(o.v);setEps([]);setSel([]);setMatchPage(0)}} style={{padding:"10px 24px",border:"none",borderRadius:10,background:isInt===o.v?"#000":"transparent",color:isInt===o.v?"#38FC1A":"#9CA3AF",fontWeight:600,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>{o.l}</button>)}
         </div>
 
         {!isInt&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
@@ -312,34 +354,44 @@ export default function App(){
 
         {isInt&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
           <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>WHAT ARE YOU THINKING ABOUT?</div>
-          <textarea className="ta" value={intContext} onChange={e=>{setIntContext(e.target.value);setEps([]);setSel([])}} placeholder="What topic, theme, or idea are you considering for this episode? E.g. 'We want to talk about why most people quit too early in business' or 'Thinking about doing an episode on hiring your first team member and the mistakes people make'. The engine will find proven episodes that validate your idea."/>
+          <textarea className="ta" value={intContext} onChange={e=>{setIntContext(e.target.value);setEps([]);setSel([]);setMatchPage(0)}} placeholder="What topic, theme, or idea are you considering for this episode? E.g. 'We want to talk about why most people quit too early in business' or 'Thinking about doing an episode on hiring your first team member and the mistakes people make'. The engine will find proven episodes that validate your idea."/>
         </div>}
 
         <div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
-          <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>TOPIC FILTERS <span style={{color:"#D1D5DB",fontWeight:400}}>(optional)</span></div>
-          <div style={{fontSize:12,color:"#9CA3AF",marginBottom:12}}>Matches against all {DATA.length} episodes using {isInt?"your topic context":"the guest background"}. Topics help refine further.</div>
+          <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>FILTER BY TOPIC</div>
+          <div style={{fontSize:12,color:"#9CA3AF",marginBottom:12}}>Select topics to filter matches from the full {DATA.length} episode library. Selected topics restrict matches to those topics only.</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {TOPICS.map(t=>{var on=gTopics.includes(t);var c=TC[t]||{bg:"#F3F4F6",t:"#374151"};
-              return <button key={t} onClick={()=>toggleTopic(t)} style={{padding:"8px 16px",borderRadius:8,border:on?"none":"1px solid #E5E7EB",background:on?c.bg:"#FFF",color:on?c.t:"#9CA3AF",fontSize:13,fontWeight:on?600:500,cursor:"pointer",outline:"none",transition:"all 0.15s",textTransform:"capitalize"}}>{t.replace(/_/g," ")}</button>})}
+              return <button key={t} onClick={()=>toggleTopic(t)} style={{padding:"8px 16px",borderRadius:8,border:on?"2px solid "+c.t:"1px solid #E5E7EB",background:on?c.bg:"#FFF",color:on?c.t:"#9CA3AF",fontSize:13,fontWeight:on?600:500,cursor:"pointer",outline:"none",transition:"all 0.15s",textTransform:"capitalize"}}>{t.replace(/_/g," ")}</button>})}
           </div>
         </div>
 
-        {matched.length>0&&<div style={{marginBottom:20}}>
-          <div style={{fontSize:11,color:"#D1D5DB",fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>{matched.length} BEST MATCHES FROM {DATA.length} EPISODES</div>
-          {matched.slice(0,isInt?12:6).map(v=><div key={v.id} onClick={()=>window.open("https://youtube.com/watch?v="+v.id,"_blank")} style={{background:"#FFF",borderRadius:10,padding:isInt?"12px 14px":"10px 14px",marginBottom:8,display:"flex",gap:12,alignItems:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.03)",cursor:"pointer",transition:"all 0.2s",border:"1px solid transparent"}} onMouseEnter={e=>e.currentTarget.style.borderColor="#E5E7EB"} onMouseLeave={e=>e.currentTarget.style.borderColor="transparent"}>
-            <div style={{flex:"0 0 80px",height:isInt?52:40,borderRadius:8,overflow:"hidden",position:"relative",background:"#F3F4F6"}}><Thumb id={v.id} ch={v.ch}/></div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:600,color:"#111",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:isInt?"normal":"nowrap",display:isInt?"-webkit-box":"block",WebkitLineClamp:isInt?2:1,WebkitBoxOrient:"vertical"}}>{v.title}</div>
-              <div style={{fontSize:11,color:"#9CA3AF",marginTop:2}}>{v.ch}{isInt?" · "+fmt(v.views)+" views · "+v.date.slice(0,7):""}</div>
+        {allMatched.length>0&&<div style={{marginBottom:20}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{fontSize:11,color:"#D1D5DB",fontWeight:700,letterSpacing:"0.06em"}}>SHOWING {matchPage*20+1}-{Math.min((matchPage+1)*20,allMatched.length)} OF {allMatched.length} MATCHES</div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="rbtn" onClick={rematch}>Shuffle matches</button>
+              {matchPage>0&&<button className="rbtn" onClick={()=>{setMatchPage(matchPage-1);setEps([]);setSel([])}}>Prev 20</button>}
+              {matchPage<totalPages-1&&<button className="rbtn" onClick={()=>{setMatchPage(matchPage+1);setEps([]);setSel([])}}>Next 20</button>}
             </div>
-            <div style={{fontSize:14,fontWeight:700,color:"#38FC1A",flexShrink:0}}>{v.pi>=100?v.pi.toFixed(0):v.pi.toFixed(1)}x</div>
+          </div>
+          {matched.map(v=><div key={v.id} onClick={()=>window.open("https://youtube.com/watch?v="+v.id,"_blank")} style={{background:"#FFF",borderRadius:10,padding:"12px 14px",marginBottom:8,display:"flex",gap:12,alignItems:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.03)",cursor:"pointer",transition:"all 0.2s",border:"1px solid transparent"}} onMouseEnter={e=>e.currentTarget.style.borderColor="#E5E7EB"} onMouseLeave={e=>e.currentTarget.style.borderColor="transparent"}>
+            <div style={{flex:"0 0 80px",height:52,borderRadius:8,overflow:"hidden",position:"relative",background:"#F3F4F6"}}><Thumb id={v.id} ch={v.ch}/></div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:600,color:"#111",overflow:"hidden",textOverflow:"ellipsis",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{v.title}</div>
+              <div style={{fontSize:11,color:"#9CA3AF",marginTop:2}}>{v.ch} · {fmt(v.views)} views · {v.date.slice(0,10)}</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",flexShrink:0}}>
+              <div style={{fontSize:14,fontWeight:700,color:"#38FC1A"}}>{v.pi>=100?v.pi.toFixed(0):v.pi.toFixed(1)}x</div>
+              <div style={{display:"flex",gap:3,marginTop:3}}>{(v.topics||[]).slice(0,2).map(t=><span key={t} style={{fontSize:9,padding:"1px 6px",borderRadius:4,background:(TC[t]||{bg:"#F3F4F6"}).bg,color:(TC[t]||{t:"#374151"}).t}}>{t.replace(/_/g," ")}</span>)}</div>
+            </div>
           </div>)}
         </div>}
 
         {canGen&&eps.length===0&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
           <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>ADD AN OUTLIER <span style={{color:"#D1D5DB",fontWeight:400}}>(optional)</span></div>
-          <div style={{fontSize:12,color:"#9CA3AF",marginBottom:12}}>Paste a YouTube link, describe a video that's performing well, or name a person/channel you think is an outlier. This gets fed in alongside the library matches.</div>
-          <textarea className="ta" value={customRef} onChange={e=>setCustomRef(e.target.value)} placeholder="e.g. https://youtube.com/watch?v=... or 'Alex Hormozi's recent video on why most businesses fail at $3M did 2M views in 3 days' or 'Codie Sanchez's contrarian take on buying boring businesses is consistently her top performer'"/>
+          <div style={{fontSize:12,color:"#9CA3AF",marginBottom:12}}>Paste a YouTube link, describe a video that's performing well, or name a person/channel you think is an outlier.</div>
+          <textarea className="ta" value={customRef} onChange={e=>setCustomRef(e.target.value)} placeholder="e.g. https://youtube.com/watch?v=... or 'Alex Hormozi's recent video on why most businesses fail at $3M did 2M views in 3 days'"/>
         </div>}
 
         {canGen&&eps.length===0&&<button className="gbtn" onClick={generate} disabled={loading}>{loading?"Generating 5 concepts...":"Generate Episode Ideas"}</button>}
@@ -349,7 +401,7 @@ export default function App(){
             <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em"}}>SELECT CONCEPTS</div>
             {sel.length>0&&<button onClick={()=>setShowBrief(true)} style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#000",color:"#38FC1A",fontSize:13,fontWeight:600,cursor:"pointer"}}>Present to Doza ({sel.length})</button>}
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>{eps.map((ep,i)=><EpCard key={i} ep={ep} i={i} on={sel.includes(i)} toggle={()=>toggleSel(i)}/>)}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>{eps.map((ep,i)=><EpCard key={i} ep={ep} i={i} on={sel.includes(i)} toggle={()=>toggleSel(i)} DATA={DATA}/>)}</div>
           <button onClick={()=>{setEps([]);setSel([]);}} style={{marginTop:20,padding:"10px 20px",borderRadius:10,border:"1px solid #E5E7EB",background:"#FFF",color:"#9CA3AF",fontSize:13,fontWeight:500,cursor:"pointer"}}>Regenerate</button>
         </div>}
       </div>}
