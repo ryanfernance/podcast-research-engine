@@ -222,15 +222,19 @@ export default function App(){
     setLoading(true);setError("");setEps([]);setSel([]);
     var ctx=matched.slice(0,5).map(v=>"- \""+v.title+"\" ("+v.ch+", "+v.pi+"x)").join("\n");
     var refBlock=customRef?"\nOutlier ref: "+customRef.slice(0,200):"";
-    var gl=isInt?"Internal ep. Host: Doza, business operator.\nTopic: "+intContext.slice(0,300):"Guest: "+gName+" ("+gDesc+")\nBio: "+gBg.slice(0,300);
-    var promptText="Geronimo Unfiltered Podcast. Host: Doza.\n\n"+gl+"\n\nBelow are proven videos that performed well. DO NOT copy their topics. Instead, study WHY they worked (the tension, the vulnerability, the contrarian angle, the specificity) and apply those PATTERNS to this guest's real background. Every concept must be authentically rooted in who this guest is and what they've actually done. Use the proven videos only as structural inspiration for what resonates with audiences.\n\n5 concepts. JSON only:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
+    var promptText="";
+    if(isInt){
+      promptText="Geronimo Unfiltered Podcast. Host: Doza, a straight-talking business operator.\n\nDoza wants to record an INTERNAL episode (no guest) about this topic:\n"+intContext.slice(0,300)+"\n\nBelow are proven videos on related themes. Study WHY they worked (the tension, the contrarian angle, the hook) and apply those PATTERNS to Doza's take on this topic. Doza speaks from lived experience as an operator. Make it authentic to him.\n\n5 concepts. JSON only, no other text:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
+    }else{
+      promptText="Geronimo Unfiltered Podcast. Host: Doza.\n\nGuest: "+gName+" ("+gDesc+")\nBio: "+gBg.slice(0,300)+"\n\nBelow are proven videos that performed well. DO NOT copy their topics. Study WHY they worked (the tension, the vulnerability, the contrarian angle, the specificity) and apply those PATTERNS to this guest's real background. Every concept must be authentically rooted in who this guest is and what they've actually done.\n\n5 concepts. JSON only, no other text:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
+    }
     try{
       var res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:promptText})});
       if(!res.ok){setError("API error "+res.status);setLoading(false);return;}
       var data=await res.json();
       if(!data.content?.[0]?.text){setError("Empty response");setLoading(false);return;}
       var raw=data.content[0].text.replace(/```json\n?|```\n?/g,"").trim();
-      try{setEps(JSON.parse(raw));}catch(e){try{var m=raw.match(/\[[\s\S]*?\](?=[^"\]}]*$)/);if(m)setEps(JSON.parse(m[0]));else{var m2=raw.match(/\[[\s\S]*\]/);if(m2)setEps(JSON.parse(m2[0]));else setError("Parse error - raw: "+raw.slice(0,100))}}catch(e2){setError("Parse error - raw: "+raw.slice(0,100))}}
+      try{setEps(JSON.parse(raw));}catch(e){var m=raw.match(/\[[\s\S]*\]/);if(m){try{setEps(JSON.parse(m[0]))}catch(e2){setError("Parse error: "+raw.slice(0,120))}}else{setError("Parse error: "+raw.slice(0,120))}}
     }catch(e){setError("Error: "+e.message);}
     setLoading(false);
   };
