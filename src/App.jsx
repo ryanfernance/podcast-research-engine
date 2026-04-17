@@ -230,7 +230,7 @@ export default function App(){
       var data=await res.json();
       if(!data.content?.[0]?.text){setError("Empty response");setLoading(false);return;}
       var raw=data.content[0].text.replace(/```json\n?|```\n?/g,"").trim();
-      try{setEps(JSON.parse(raw));}catch(e){var m=raw.match(/\[[\s\S]*\]/);if(m)setEps(JSON.parse(m[0]));else setError("Parse error");}
+      try{setEps(JSON.parse(raw));}catch(e){try{var m=raw.match(/\[[\s\S]*?\](?=[^"\]}]*$)/);if(m)setEps(JSON.parse(m[0]));else{var m2=raw.match(/\[[\s\S]*\]/);if(m2)setEps(JSON.parse(m2[0]));else setError("Parse error - raw: "+raw.slice(0,100))}}catch(e2){setError("Parse error - raw: "+raw.slice(0,100))}}
     }catch(e){setError("Error: "+e.message);}
     setLoading(false);
   };
