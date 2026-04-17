@@ -248,8 +248,8 @@ export default function App(){
     setSaved(loadSaved());
   },[]);
 
-  var CHANNELS=useMemo(function(){return[].concat(new Set(DATA.map(function(v){return v.ch}))).sort()},[DATA]);
-  var TOPICS=useMemo(function(){return[].concat(new Set(DATA.flatMap(function(v){return v.topics||[]}))).sort()},[DATA]);
+  var CHANNELS=useMemo(function(){return Array.from(new Set(DATA.map(function(v){return v.ch}))).sort()},[DATA]);
+  var TOPICS=useMemo(function(){return Array.from(new Set(DATA.flatMap(function(v){return v.topics||[]}))).sort()},[DATA]);
   var topicCounts=useMemo(function(){var c={};DATA.forEach(function(v){(v.topics||[]).forEach(function(t){c[t]=(c[t]||0)+1})});return c},[DATA]);
 
   var filtered=useMemo(function(){
