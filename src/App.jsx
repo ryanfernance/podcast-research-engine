@@ -220,10 +220,10 @@ export default function App(){
 
   const generate=async()=>{
     setLoading(true);setError("");setEps([]);setSel([]);
-    var ctx=matched.slice(0,8).map(v=>"- \""+v.title+"\" by "+v.ch+" ("+v.pi+"x, "+fmt(v.views)+" views)").join("\n");
-    var refBlock=customRef?"\n\nADDITIONAL REFERENCE (the user flagged this as an outlier worth drawing from):\n"+customRef:"";
-    var gl=isInt?"INTERNAL episode hosted by Doza and the Geronimo team. Doza is a straight-talking business operator and coach.\n\nTOPIC/CONTEXT: "+intContext:"GUEST: "+gName+"\nEXPERTISE: "+gDesc+"\nBACKGROUND: "+gBg;
-    var promptText="You produce the Geronimo Unfiltered Podcast, hosted by Doza. It covers business, leadership, mindset, health, and performance. The audience is ambitious operators and entrepreneurs.\n\nYour job: match a guest (or internal discussion) to PRE-VALIDATED episode concepts. The proven videos below have already performed well on major podcasts. Use them as proof that the angle works, then tailor each concept to this specific guest or topic.\n\n"+gl+"\n\nGenerate 5 episode concepts. Each one must be anchored to a proven video that validates the angle, then shaped around what this guest uniquely brings.\n\nFor each:\n- title: Punchy, scroll-stopping title\n- hook: Why someone clicks this (one sentence)\n- why_it_works: Reference the source video's performance and why this angle resonates with audiences\n- beats: 4 concrete beats to hit during the episode\n- opening: First 20 seconds in Doza's direct voice\n- source: Which proven video inspired this and its performance\n\nJSON only:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nPROVEN VIDEOS (these have already worked):\n"+ctx+refBlock;
+    var ctx=matched.slice(0,5).map(v=>"- \""+v.title+"\" ("+v.ch+", "+v.pi+"x)").join("\n");
+    var refBlock=customRef?"\nOUTLIER: "+customRef.slice(0,200):"";
+    var gl=isInt?"Internal ep. Host: Doza, business operator.\nTopic: "+intContext.slice(0,300):"Guest: "+gName+" ("+gDesc+")\nBio: "+gBg.slice(0,300);
+    var promptText="Geronimo Unfiltered Podcast producer. Host: Doza.\n"+gl+"\n\nFrom these proven videos, generate 5 episode concepts tailored to this guest/topic. JSON only:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nProven:\n"+ctx+refBlock;
     try{
       var res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:promptText})});
       if(!res.ok){setError("API error "+res.status);setLoading(false);return;}
