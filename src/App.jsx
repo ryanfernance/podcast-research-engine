@@ -168,7 +168,7 @@ function DozaBrief({sel,eps,gName,gDesc,gBg,intContext,isInt,onClose,DATA}){
   </div>;
 }
 
-function smartMatch(DATA, gName, gDesc, gBg, gTopics, seed) {
+function smartMatch(DATA, gName, gDesc, gBg, gTopics) {
   var allText = (gName + " " + gDesc + " " + gBg).toLowerCase();
   var words = allText.split(/\s+/).filter(function(w){return w.length > 3 && !["this","that","with","from","they","their","have","been","will","would","about","which","there","these","those","other","into","also","than","more","some","very","just","when","what","really","people","every","thing","make","know","want","like","good","best","most","over","only","back","first","years","could","should","being","after","going","through","doing","still","getting","around"].includes(w)});
   var scored = DATA.map(function(v) {
@@ -176,8 +176,7 @@ function smartMatch(DATA, gName, gDesc, gBg, gTopics, seed) {
     var topicMatch = gTopics.length > 0 ? ((v.topics || []).some(function(t){return gTopics.includes(t)}) ? 4 : -2) : 0;
     var wordMatch = words.reduce(function(acc, w){return acc + (title.includes(w) ? 1.5 : 0)}, 0);
     var piBonus = Math.min(v.pi * 0.02, 1);
-    var noise = Math.random() * 3;
-    return { v: v, score: topicMatch + wordMatch + piBonus + noise };
+    return { v: v, score: topicMatch + wordMatch + piBonus };
   });
   if(gTopics.length > 0){
     scored = scored.filter(function(s){return (s.v.topics||[]).some(function(t){return gTopics.includes(t)})});
@@ -185,9 +184,9 @@ function smartMatch(DATA, gName, gDesc, gBg, gTopics, seed) {
   scored.sort(function(a, b){return b.score - a.score});
   var seen = {};
   var results = [];
-  for (var i = 0; i < scored.length && results.length < 40; i++) {
+  for (var i = 0; i < scored.length; i++) {
     var ch = scored[i].v.ch;
-    if (!seen[ch] || seen[ch] < 3) {
+    if (!seen[ch] || seen[ch] < 4) {
       results.push(scored[i].v);
       seen[ch] = (seen[ch] || 0) + 1;
     }
@@ -215,7 +214,6 @@ export default function App(){
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
   const [showBrief,setShowBrief]=useState(false);
-  const [matchSeed,setMatchSeed]=useState(1);
   const [matchPage,setMatchPage]=useState(0);
 
   useEffect(()=>{
@@ -239,19 +237,17 @@ export default function App(){
   var allMatched=useMemo(function(){
     if(isInt){
       if(!intContext && gTopics.length===0) return [];
-      return smartMatch(DATA, "", intContext, intContext, gTopics, matchSeed);
+      return smartMatch(DATA, "", intContext, intContext, gTopics);
     }
     if(!gName && !gBg && gTopics.length===0) return [];
-    return smartMatch(DATA, gName, gDesc, gBg, gTopics, matchSeed);
-  },[DATA,gName,gDesc,gBg,gTopics,isInt,intContext,matchSeed]);
+    return smartMatch(DATA, gName, gDesc, gBg, gTopics);
+  },[DATA,gName,gDesc,gBg,gTopics,isInt,intContext]);
 
   var matched = allMatched.slice(matchPage*20, matchPage*20+20);
   var totalPages = Math.ceil(allMatched.length/20);
 
   var toggleTopic=function(t){setGTopics(function(p){return p.includes(t)?p.filter(function(x){return x!==t}):[...p,t]});setEps([]);setSel([]);setMatchPage(0);};
   var toggleSel=function(i){setSel(function(p){return p.includes(i)?p.filter(function(x){return x!==i}):[...p,i]})};
-
-  var rematch=function(){setMatchSeed(function(s){return s+1});setMatchPage(0);setEps([]);setSel([])};
 
   var generate=async function(){
     setLoading(true);setError("");setEps([]);setSel([]);
@@ -368,9 +364,8 @@ export default function App(){
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <div style={{fontSize:11,color:"#D1D5DB",fontWeight:700,letterSpacing:"0.06em"}}>SHOWING {matchPage*20+1}-{Math.min((matchPage+1)*20,allMatched.length)} OF {allMatched.length} MATCHES</div>
             <div style={{display:"flex",gap:8}}>
-              <button className="rbtn" onClick={rematch}>Shuffle matches</button>
-              {matchPage>0&&<button className="rbtn" onClick={()=>{setMatchPage(matchPage-1);setEps([]);setSel([])}}>Prev 20</button>}
-              {matchPage<totalPages-1&&<button className="rbtn" onClick={()=>{setMatchPage(matchPage+1);setEps([]);setSel([])}}>Next 20</button>}
+              {matchPage>0&&<button className="rbtn" onClick={()=>{setMatchPage(matchPage-1);setEps([]);setSel([])}}>&#8592; Prev 20</button>}
+              {matchPage<totalPages-1&&<button className="rbtn" onClick={()=>{setMatchPage(matchPage+1);setEps([]);setSel([])}}>Next 20 &#8594;</button>}
             </div>
           </div>
           {matched.map(v=><div key={v.id} onClick={()=>window.open("https://youtube.com/watch?v="+v.id,"_blank")} style={{background:"#FFF",borderRadius:10,padding:"12px 14px",marginBottom:8,display:"flex",gap:12,alignItems:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.03)",cursor:"pointer",transition:"all 0.2s",border:"1px solid transparent"}} onMouseEnter={e=>e.currentTarget.style.borderColor="#E5E7EB"} onMouseLeave={e=>e.currentTarget.style.borderColor="transparent"}>
