@@ -221,9 +221,9 @@ export default function App(){
   const generate=async()=>{
     setLoading(true);setError("");setEps([]);setSel([]);
     var ctx=matched.slice(0,5).map(v=>"- \""+v.title+"\" ("+v.ch+", "+v.pi+"x)").join("\n");
-    var refBlock=customRef?"\nOUTLIER: "+customRef.slice(0,200):"";
+    var refBlock=customRef?"\nOutlier ref: "+customRef.slice(0,200):"";
     var gl=isInt?"Internal ep. Host: Doza, business operator.\nTopic: "+intContext.slice(0,300):"Guest: "+gName+" ("+gDesc+")\nBio: "+gBg.slice(0,300);
-    var promptText="Geronimo Unfiltered Podcast producer. Host: Doza.\n"+gl+"\n\nFrom these proven videos, generate 5 episode concepts tailored to this guest/topic. JSON only:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nProven:\n"+ctx+refBlock;
+    var promptText="Geronimo Unfiltered Podcast. Host: Doza.\n\n"+gl+"\n\nBelow are proven videos that performed well. DO NOT copy their topics. Instead, study WHY they worked (the tension, the vulnerability, the contrarian angle, the specificity) and apply those PATTERNS to this guest's real background. Every concept must be authentically rooted in who this guest is and what they've actually done. Use the proven videos only as structural inspiration for what resonates with audiences.\n\n5 concepts. JSON only:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
     try{
       var res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:promptText})});
       if(!res.ok){setError("API error "+res.status);setLoading(false);return;}
