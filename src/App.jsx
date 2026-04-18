@@ -61,15 +61,16 @@ function findSourceVid(ep, DATA){
   return null;
 }
 
-function VCard({v,i,onTopicClick,onUseAsSource}){
+function VCard({v,i,onTopicClick,onUseAsSource,onPin,isPinned}){
   var bg=v.pi>=10?"#DC2626":v.pi>=5?"#000":"#38FC1A";
-  return <div className="vcard" style={{animation:"fadeUp 0.4s ease "+Math.min(i*0.03,0.6)+"s both"}}>
+  return <div className="vcard" style={{animation:"fadeUp 0.4s ease "+Math.min(i*0.03,0.6)+"s both",border:isPinned?"2px solid #38FC1A":"none"}}>
     <div onClick={function(){window.open("https://youtube.com/watch?v="+v.id,"_blank")}} style={{cursor:"pointer"}}>
       <div style={{position:"relative",paddingTop:"56.25%",background:"#F3F4F6",overflow:"hidden"}}>
         <Thumb id={v.id} ch={v.ch}/>
         <div style={{position:"absolute",top:12,right:12,background:bg,color:"#FFF",padding:"4px 10px",borderRadius:8,fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:13,zIndex:2,boxShadow:"0 2px 8px rgba(0,0,0,0.2)"}}>
           {v.pi>=100?v.pi.toFixed(0):v.pi.toFixed(1)}x
         </div>
+        {isPinned&&<div style={{position:"absolute",top:12,left:12,background:"#38FC1A",color:"#000",padding:"3px 8px",borderRadius:6,fontSize:10,fontWeight:700,zIndex:2}}>PINNED</div>}
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(transparent,rgba(0,0,0,0.8))",padding:"32px 14px 10px",zIndex:1}}>
           <span style={{color:"#38FC1A",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.1em",textTransform:"uppercase"}}>{v.ch}</span>
         </div>
@@ -83,7 +84,10 @@ function VCard({v,i,onTopicClick,onUseAsSource}){
     </div>
     <div style={{padding:"0 16px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div style={{display:"flex",flexWrap:"wrap",gap:4}} onClick={function(e){e.stopPropagation()}}>{(v.topics||[]).map(function(t){return <span key={t} className="spill" onClick={function(){if(onTopicClick)onTopicClick(t)}} style={{background:(TC[t]||{bg:"#F3F4F6"}).bg,color:(TC[t]||{t:"#374151"}).t}}>{t.replace(/_/g," ")}</span>})}</div>
-      {onUseAsSource&&<button className="usebtn" onClick={function(e){e.stopPropagation();onUseAsSource(v)}}>Use as source</button>}
+      <div style={{display:"flex",gap:6}}>
+        {onPin&&<button className="usebtn" onClick={function(e){e.stopPropagation();onPin(v)}} style={{borderColor:isPinned?"#38FC1A":"",color:isPinned?"#38FC1A":""}}>{isPinned?"Unpin":"Pin for builder"}</button>}
+        {onUseAsSource&&<button className="usebtn" onClick={function(e){e.stopPropagation();onUseAsSource(v)}}>Use as source</button>}
+      </div>
     </div>
   </div>;
 }
@@ -242,6 +246,7 @@ export default function App(){
   var [showBrief,setShowBrief]=useState(false);
   var [matchPage,setMatchPage]=useState(0);
   var [saved,setSaved]=useState([]);
+  var [pinned,setPinned]=useState([]);
 
   useEffect(function(){
     fetch("/data.json").then(function(r){return r.json()}).then(function(d){setDATA(d);setLoadingData(false)}).catch(function(){setLoadingData(false)});
@@ -278,6 +283,15 @@ export default function App(){
   var toggleTopic=function(t){setGTopics(function(p){return p.includes(t)?p.filter(function(x){return x!==t}):[].concat(p,[t])});setEps([]);setSel([]);setMatchPage(0)};
   var toggleSel=function(i){setSel(function(p){return p.includes(i)?p.filter(function(x){return x!==i}):[].concat(p,[i])})};
 
+  var togglePin=function(v){
+    setPinned(function(p){
+      var exists=p.some(function(x){return x.id===v.id});
+      if(exists)return p.filter(function(x){return x.id!==v.id});
+      return [].concat(p,[v]);
+    });
+    setEps([]);setSel([]);
+  };
+
   var useAsSource=function(v){
     setTab("builder");
     setCustomRef("\""+v.title+"\" by "+v.ch+" ("+v.pi+"x performance, "+fmt(v.views)+" views) — https://youtube.com/watch?v="+v.id);
@@ -291,8 +305,9 @@ export default function App(){
 
   var generate=async function(){
     setLoading(true);setError("");setEps([]);setSel([]);
-    var top8=matched.slice(0,8);
-    var ctx=top8.map(function(v){return "- ["+v.id+"] \""+v.title+"\" ("+v.ch+", "+v.pi+"x)"}).join("\n");
+    var pinnedCtx=pinned.map(function(v){return "- ["+v.id+"] \""+v.title+"\" ("+v.ch+", "+v.pi+"x) [PINNED - use this as primary source]"}).join("\n");
+    var autoCtx=matched.filter(function(v){return!pinned.some(function(p){return p.id===v.id})}).slice(0,Math.max(2,8-pinned.length)).map(function(v){return "- ["+v.id+"] \""+v.title+"\" ("+v.ch+", "+v.pi+"x)"}).join("\n");
+    var ctx=pinnedCtx+(pinnedCtx&&autoCtx?"\n":"")+autoCtx;
     var refBlock=customRef?"\nOutlier ref: "+customRef.slice(0,200):"";
     var promptText="";
     if(isInt){
@@ -311,8 +326,8 @@ export default function App(){
     setLoading(false);
   };
 
-  var canGen=isInt?(intContext||gTopics.length>0)&&allMatched.length>0:gName&&gBg&&allMatched.length>0;
-  var genLabel="Generating from matches "+(matchPage*20+1)+"-"+Math.min((matchPage+1)*20,allMatched.length);
+  var canGen=isInt?(intContext||gTopics.length>0)&&(allMatched.length>0||pinned.length>0):gName&&gBg&&(allMatched.length>0||pinned.length>0);
+  var genLabel=pinned.length>0?"Generating from "+pinned.length+" pinned"+(matched.length>0?" + matches "+(matchPage*20+1)+"-"+Math.min((matchPage+1)*20,allMatched.length):""):"Generating from matches "+(matchPage*20+1)+"-"+Math.min((matchPage+1)*20,allMatched.length);
 
   if(loadingData)return <div style={{minHeight:"100vh",background:"#FAFAF9",display:"flex",alignItems:"center",justifyContent:"center"}}>
     <div style={{textAlign:"center"}}>
@@ -340,7 +355,7 @@ export default function App(){
           </div>
         </div>
         <div style={{display:"flex",gap:28}}>
-          {[{l:"Episodes",v:DATA.length,c:"#38FC1A"},{l:"Channels",v:CHANNELS.length,c:"#FFF"},{l:"Saved",v:saved.length,c:"#FEF9C3"}].map(function(s){return <div key={s.l} style={{textAlign:"right"}}>
+          {[{l:"Episodes",v:DATA.length,c:"#38FC1A"},{l:"Channels",v:CHANNELS.length,c:"#FFF"},{l:"Pinned",v:pinned.length,c:pinned.length>0?"#38FC1A":"#444"},{l:"Saved",v:saved.length,c:"#FEF9C3"}].map(function(s){return <div key={s.l} style={{textAlign:"right"}}>
             <div style={{fontSize:22,fontWeight:700,color:s.c}}>{s.v}</div>
             <div style={{fontSize:9,color:"#666",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase"}}>{s.l}</div>
           </div>})}
@@ -350,7 +365,7 @@ export default function App(){
 
     <div style={{background:"#FFF",borderBottom:"1px solid #F0F0EE",position:"sticky",top:0,zIndex:50}}>
       <div style={{maxWidth:1320,margin:"0 auto",padding:"0 28px",display:"flex",gap:8}}>
-        {[{id:"library",l:"Proven Ideas"},{id:"builder",l:"Episode Builder"},{id:"saved",l:"Saved ("+saved.length+")"}].map(function(t){return <button key={t.id} onClick={function(){setTab(t.id)}} style={{padding:"14px 20px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid #38FC1A":"2px solid transparent",color:tab===t.id?"#111":"#9CA3AF",fontWeight:tab===t.id?600:500,fontSize:14,cursor:"pointer",transition:"all 0.2s"}}>{t.l}</button>})}
+        {[{id:"library",l:"Proven Ideas"},{id:"builder",l:"Episode Builder"+(pinned.length?" ("+pinned.length+" pinned)":"")},{id:"saved",l:"Saved ("+saved.length+")"}].map(function(t){return <button key={t.id} onClick={function(){setTab(t.id)}} style={{padding:"14px 20px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid #38FC1A":"2px solid transparent",color:tab===t.id?"#111":"#9CA3AF",fontWeight:tab===t.id?600:500,fontSize:14,cursor:"pointer",transition:"all 0.2s"}}>{t.l}</button>})}
       </div>
     </div>
 
@@ -369,7 +384,7 @@ export default function App(){
             {fTp!=="all"&&<span onClick={function(){setFTp("all")}} style={{fontSize:12,color:"#9CA3AF",cursor:"pointer",padding:"6px 14px",display:"flex",alignItems:"center"}}>Clear</span>}
           </div>
         </div>
-        <div className="card-grid">{filtered.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(fTp===t?"all":t)}} onUseAsSource={useAsSource}/>})}</div>
+        <div className="card-grid">{filtered.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(fTp===t?"all":t)}} onUseAsSource={useAsSource} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===v.id})}/>})}</div>
       </>}
 
       {tab==="builder"&&<div style={{maxWidth:720,margin:"0 auto"}}>
@@ -400,6 +415,22 @@ export default function App(){
               return <button key={t} onClick={function(){toggleTopic(t)}} style={{padding:"8px 16px",borderRadius:8,border:on?"2px solid "+c.t:"1px solid #E5E7EB",background:on?c.bg:"#FFF",color:on?c.t:"#9CA3AF",fontSize:13,fontWeight:on?600:500,cursor:"pointer",outline:"none",transition:"all 0.15s",textTransform:"capitalize"}}>{t.replace(/_/g," ")} <span style={{opacity:0.5,fontSize:11}}>({topicCounts[t]||0})</span></button>})}
           </div>
         </div>
+
+        {pinned.length>0&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",border:"1px solid #38FC1A"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em"}}>PINNED FROM LIBRARY ({pinned.length})</div>
+            <button className="rbtn" onClick={function(){setPinned([]);setEps([]);setSel([])}}>Clear all pins</button>
+          </div>
+          <div style={{fontSize:12,color:"#9CA3AF",marginBottom:12}}>These episodes will be used as primary source material when generating. Pinned from Proven Ideas.</div>
+          {pinned.map(function(v){return <div key={v.id} style={{display:"flex",gap:10,alignItems:"center",background:"#F0FDF4",borderRadius:8,padding:"10px 12px",marginBottom:6,border:"1px solid #DCFCE7"}}>
+            <div style={{flex:"0 0 64px",height:42,borderRadius:6,overflow:"hidden",position:"relative",background:"#F3F4F6",cursor:"pointer"}} onClick={function(){window.open("https://youtube.com/watch?v="+v.id,"_blank")}}><Thumb id={v.id} ch={v.ch}/></div>
+            <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={function(){window.open("https://youtube.com/watch?v="+v.id,"_blank")}}>
+              <div style={{fontSize:13,fontWeight:600,color:"#111",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.title}</div>
+              <div style={{fontSize:11,color:"#9CA3AF"}}>{v.ch} · {v.pi}x · {fmt(v.views)} views</div>
+            </div>
+            <button onClick={function(){togglePin(v)}} style={{background:"none",border:"none",color:"#9CA3AF",cursor:"pointer",fontSize:14,padding:"4px"}}>&#10005;</button>
+          </div>})}
+        </div>}
 
         {allMatched.length>0&&<div style={{marginBottom:20}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
