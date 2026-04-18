@@ -298,7 +298,25 @@ export default function App(){
   };
 
   var doSave=function(ep){
-    var updated=[].concat(saved,[{title:ep.title,hook:ep.hook||ep.angle||"",source:ep.source||"",ts:Date.now()}]);
+    var srcVid=findSourceVid(ep,DATA);
+    var saved_item={
+      title:ep.title,
+      hook:ep.hook||ep.angle||"",
+      why_it_works:ep.why_it_works||"",
+      beats:ep.beats||[],
+      opening:ep.opening||"",
+      source:ep.source||"",
+      source_id:ep.source_id||"",
+      ts:Date.now()
+    };
+    if(srcVid){
+      saved_item.src_title=srcVid.title;
+      saved_item.src_ch=srcVid.ch;
+      saved_item.src_id=srcVid.id;
+      saved_item.src_pi=srcVid.pi;
+      saved_item.src_views=srcVid.views;
+    }
+    var updated=[].concat(saved,[saved_item]);
     setSaved(updated);
     saveConcepts(updated);
   };
@@ -472,24 +490,76 @@ export default function App(){
         </div>}
       </div>}
 
-      {tab==="saved"&&<div style={{maxWidth:720,margin:"0 auto"}}>
+      {tab==="saved"&&<div style={{maxWidth:760,margin:"0 auto"}}>
         {saved.length===0&&<div style={{textAlign:"center",padding:"60px 20px",color:"#9CA3AF"}}>
           <div style={{fontSize:40,marginBottom:12}}>&#9733;</div>
           <div style={{fontSize:15,fontWeight:600}}>No saved concepts yet</div>
           <div style={{fontSize:13,marginTop:8}}>Generate episode ideas and click "Save concept" on the ones you want to keep.</div>
         </div>}
-        {saved.map(function(s,i){return <div key={i} style={{background:"#FFF",borderRadius:12,border:"1px solid #E5E7EB",padding:"16px 20px",marginBottom:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-            <div>
-              <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:4}}>{s.title}</h3>
-              <p style={{fontSize:13,color:"#6B7280",marginBottom:4}}>{s.hook}</p>
-              {s.source&&<p style={{fontSize:11,color:"#D1D5DB",fontStyle:"italic"}}>{s.source}</p>}
-            </div>
-            <button onClick={function(){var u=saved.filter(function(_,j){return j!==i});setSaved(u);saveConcepts(u)}} style={{background:"none",border:"none",color:"#D1D5DB",cursor:"pointer",fontSize:16}}>&#10005;</button>
+        {saved.length>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em"}}>{saved.length} SAVED CONCEPTS</div>
+          <div style={{display:"flex",gap:8}}>
+            <button className="rbtn" onClick={function(){
+              var text=saved.map(function(s,i){
+                var lines=["CONCEPT "+(i+1)+": "+s.title,"Hook: "+s.hook];
+                if(s.why_it_works)lines.push("Why it works: "+s.why_it_works);
+                if(s.beats&&s.beats.length)lines.push("Beats: "+s.beats.join(" | "));
+                if(s.opening)lines.push("Opening: "+s.opening);
+                if(s.src_title)lines.push("Pulled from: \""+s.src_title+"\" by "+s.src_ch+" ("+s.src_pi+"x, "+fmt(s.src_views)+" views) — https://youtube.com/watch?v="+s.src_id);
+                else if(s.source)lines.push("Source: "+s.source);
+                lines.push("Saved: "+new Date(s.ts).toLocaleDateString());
+                return lines.join("\n");
+              }).join("\n\n---\n\n");
+              var header="GERONIMO UNFILTERED — SAVED EPISODE CONCEPTS\nExported: "+new Date().toLocaleDateString()+"\n"+saved.length+" concepts\n\n"+"=".repeat(50)+"\n\n";
+              var blob=new Blob([header+text],{type:"text/plain"});
+              var url=URL.createObjectURL(blob);
+              var a=document.createElement("a");a.href=url;a.download="geronimo-saved-concepts.txt";a.click();URL.revokeObjectURL(url);
+            }}>Export as text</button>
+            <button className="rbtn" onClick={function(){
+              var rows=[["Concept","Hook","Why It Works","Beats","Opening","Source Video","Source Channel","Source PI","Source Views","Source URL","Saved Date"]];
+              saved.forEach(function(s){rows.push([s.title,s.hook,s.why_it_works||"",(s.beats||[]).join(" | "),s.opening||"",s.src_title||"",s.src_ch||"",s.src_pi||"",s.src_views||"",s.src_id?"https://youtube.com/watch?v="+s.src_id:"",new Date(s.ts).toLocaleDateString()])});
+              var csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"'}).join(",")}).join("\n");
+              var blob=new Blob([csv],{type:"text/csv"});
+              var url=URL.createObjectURL(blob);
+              var a=document.createElement("a");a.href=url;a.download="geronimo-saved-concepts.csv";a.click();URL.revokeObjectURL(url);
+            }}>Export as CSV</button>
+            <button className="rbtn" onClick={function(){if(window.confirm("Clear all saved concepts?")){setSaved([]);saveConcepts([])}}}>Clear all</button>
           </div>
-          <div style={{fontSize:10,color:"#D1D5DB",marginTop:8}}>{new Date(s.ts).toLocaleDateString()}</div>
+        </div>}
+        {saved.map(function(s,i){return <div key={i} style={{background:"#FFF",borderRadius:14,border:"1px solid #E5E7EB",padding:24,marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,color:"#9CA3AF",fontWeight:600,marginBottom:4}}>CONCEPT {i+1} · {new Date(s.ts).toLocaleDateString()}</div>
+              <h3 style={{fontSize:18,fontWeight:700,color:"#111",lineHeight:1.35,marginBottom:6}}>{s.title}</h3>
+              <p style={{fontSize:14,color:"#6B7280",lineHeight:1.55}}>{s.hook}</p>
+            </div>
+            <button onClick={function(){var u=saved.filter(function(_,j){return j!==i});setSaved(u);saveConcepts(u)}} style={{background:"none",border:"none",color:"#D1D5DB",cursor:"pointer",fontSize:16,padding:"4px",marginLeft:12}}>&#10005;</button>
+          </div>
+          {s.why_it_works&&<div style={{background:"#FAFAFA",borderRadius:10,padding:14,marginBottom:12}}>
+            <div style={{fontSize:10,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:4}}>WHY IT WORKS</div>
+            <p style={{fontSize:13,color:"#374151",lineHeight:1.55}}>{s.why_it_works}</p>
+          </div>}
+          {s.src_id&&<div onClick={function(){window.open("https://youtube.com/watch?v="+s.src_id,"_blank")}} style={{display:"flex",gap:10,alignItems:"center",background:"#FAFAFA",borderRadius:10,padding:"10px 14px",marginBottom:12,cursor:"pointer",border:"1px solid #F3F4F6"}}>
+            <div style={{flex:"0 0 72px",height:46,borderRadius:6,overflow:"hidden",position:"relative",background:"#E5E7EB"}}><Thumb id={s.src_id} ch={s.src_ch||""}/></div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,color:"#38FC1A",fontWeight:700,letterSpacing:"0.04em"}}>PULLED FROM</div>
+              <div style={{fontSize:13,fontWeight:600,color:"#111"}}>{s.src_title}</div>
+              <div style={{fontSize:11,color:"#9CA3AF"}}>{s.src_ch} · {s.src_pi}x · {fmt(s.src_views)} views</div>
+            </div>
+          </div>}
+          {!s.src_id&&s.source&&<p style={{fontSize:12,color:"#D1D5DB",fontStyle:"italic",marginBottom:12}}>{s.source}</p>}
+          {s.beats&&s.beats.length>0&&<div style={{marginBottom:12}}>
+            <div style={{fontSize:10,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>BEATS TO HIT</div>
+            {s.beats.map(function(b,j){return <div key={j} style={{display:"flex",gap:8,marginBottom:6}}>
+              <span style={{flex:"0 0 20px",height:20,borderRadius:4,background:"#000",color:"#38FC1A",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{j+1}</span>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.5}}>{b}</p>
+            </div>})}
+          </div>}
+          {s.opening&&<div>
+            <div style={{fontSize:10,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>OPENING</div>
+            <p style={{fontSize:13,color:"#374151",lineHeight:1.55,fontStyle:"italic",background:"#FAFAFA",padding:12,borderRadius:8,borderLeft:"3px solid #38FC1A"}}>{s.opening}</p>
+          </div>}
         </div>})}
-        {saved.length>0&&<button onClick={function(){if(window.confirm("Clear all saved concepts?")){setSaved([]);saveConcepts([])}}} style={{marginTop:12,padding:"10px 20px",borderRadius:10,border:"1px solid #E5E7EB",background:"#FFF",color:"#9CA3AF",fontSize:13,fontWeight:500,cursor:"pointer"}}>Clear all</button>}
       </div>}
 
       {tab==="guide"&&<div style={{maxWidth:760,margin:"0 auto"}}>
