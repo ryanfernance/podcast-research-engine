@@ -366,9 +366,9 @@ export default function App(){
       <h1 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:42,color:"#FFF",letterSpacing:"0.04em",marginBottom:4,lineHeight:1}}>GERONIMO UNFILTERED</h1>
       <p style={{color:"#38FC1A",fontSize:12,fontWeight:600,letterSpacing:"0.2em",marginBottom:32}}>PODCAST RESEARCH ENGINE</p>
       <p style={{color:"#DFDFDF",fontSize:16,lineHeight:1.65,marginBottom:16,fontFamily:"'DM Sans',sans-serif"}}>Find what's already working. Use it to build what's next.</p>
-      <p style={{color:"#6B7280",fontSize:14,lineHeight:1.65,marginBottom:40,fontFamily:"'DM Sans',sans-serif"}}>This engine scrapes {DATA.length} top-performing podcast episodes from {CHANNELS.length} YouTube channels, scores them by performance index, and generates pre-validated episode concepts for Geronimo Unfiltered. Browse the library, pin proven videos, and build episode briefs backed by data.</p>
+      <p style={{color:"#6B7280",fontSize:14,lineHeight:1.65,marginBottom:40,fontFamily:"'DM Sans',sans-serif"}}>This engine scrapes the full libraries of {CHANNELS.length} top YouTube podcast channels, scores them by performance index, and generates pre-validated episode concepts for Geronimo Unfiltered. Browse the library, pin proven videos, and build episode briefs backed by data.</p>
       <div style={{display:"flex",gap:16,justifyContent:"center",marginBottom:32,flexWrap:"wrap"}}>
-        {[{v:DATA.length,l:"Episodes",c:"#38FC1A"},{v:CHANNELS.length,l:"Channels",c:"#FFF"},{v:TOPICS.length,l:"Topics",c:"#38FC1A"}].map(function(s){return <div key={s.l} style={{background:"#111",borderRadius:12,padding:"16px 24px",border:"1px solid #29292D",minWidth:100}}>
+        {[{v:CHANNELS.length,l:"Channels",c:"#38FC1A"},{v:TOPICS.length,l:"Topics",c:"#FFF"}].map(function(s){return <div key={s.l} style={{background:"#111",borderRadius:12,padding:"16px 24px",border:"1px solid #29292D",minWidth:100}}>
           <div style={{fontSize:28,fontWeight:700,color:s.c,fontFamily:"'DM Sans',sans-serif"}}>{s.v}</div>
           <div style={{fontSize:10,color:"#6B7280",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",marginTop:4}}>{s.l}</div>
         </div>})}
