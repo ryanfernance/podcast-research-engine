@@ -365,7 +365,7 @@ export default function App(){
 
     <div style={{background:"#FFF",borderBottom:"1px solid #F0F0EE",position:"sticky",top:0,zIndex:50}}>
       <div style={{maxWidth:1320,margin:"0 auto",padding:"0 28px",display:"flex",gap:8}}>
-        {[{id:"library",l:"Proven Ideas"},{id:"builder",l:"Episode Builder"+(pinned.length?" ("+pinned.length+" pinned)":"")},{id:"saved",l:"Saved ("+saved.length+")"}].map(function(t){return <button key={t.id} onClick={function(){setTab(t.id)}} style={{padding:"14px 20px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid #38FC1A":"2px solid transparent",color:tab===t.id?"#111":"#9CA3AF",fontWeight:tab===t.id?600:500,fontSize:14,cursor:"pointer",transition:"all 0.2s"}}>{t.l}</button>})}
+        {[{id:"library",l:"Proven Ideas"},{id:"builder",l:"Episode Builder"+(pinned.length?" ("+pinned.length+" pinned)":"")},{id:"saved",l:"Saved ("+saved.length+")"},{id:"guide",l:"How to Use"}].map(function(t){return <button key={t.id} onClick={function(){setTab(t.id)}} style={{padding:"14px 20px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid #38FC1A":"2px solid transparent",color:tab===t.id?"#111":"#9CA3AF",fontWeight:tab===t.id?600:500,fontSize:14,cursor:"pointer",transition:"all 0.2s"}}>{t.l}</button>})}
       </div>
     </div>
 
@@ -490,6 +490,115 @@ export default function App(){
           <div style={{fontSize:10,color:"#D1D5DB",marginTop:8}}>{new Date(s.ts).toLocaleDateString()}</div>
         </div>})}
         {saved.length>0&&<button onClick={function(){if(window.confirm("Clear all saved concepts?")){setSaved([]);saveConcepts([])}}} style={{marginTop:12,padding:"10px 20px",borderRadius:10,border:"1px solid #E5E7EB",background:"#FFF",color:"#9CA3AF",fontSize:13,fontWeight:500,cursor:"pointer"}}>Clear all</button>}
+      </div>}
+
+      {tab==="guide"&&<div style={{maxWidth:760,margin:"0 auto"}}>
+        <div style={{background:"#FFF",borderRadius:16,padding:32,marginBottom:24,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+          <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:"#111",letterSpacing:"0.04em",marginBottom:4}}>PODCAST RESEARCH ENGINE</h2>
+          <p style={{fontSize:15,color:"#6B7280",lineHeight:1.6,marginBottom:24}}>This tool scrapes the top-performing podcast episodes from {CHANNELS.length} major YouTube channels, scores them by performance index, and uses that data to generate pre-validated episode concepts for Geronimo Unfiltered.</p>
+
+          <div style={{background:"#000",borderRadius:12,padding:20,marginBottom:24}}>
+            <div style={{fontSize:12,color:"#38FC1A",fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>HOW IT WORKS</div>
+            <p style={{fontSize:14,color:"#FFF",lineHeight:1.6}}>Every week, the engine automatically scrapes {CHANNELS.length} podcast channels via YouTube Data API. It pulls every video over 10 minutes from the last 2 years, calculates each video's performance vs the channel's median (the "PI" score), and keeps the top performers. A video with 5x means it got 5 times the channel's usual views. That's a signal the topic, angle, or packaging resonated.</p>
+          </div>
+
+          <div style={{borderBottom:"1px solid #F3F4F6",paddingBottom:24,marginBottom:24}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#DCFCE7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#166534"}}>1</div>
+              <div>
+                <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Proven Ideas (The Library)</h3>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>Browse all {DATA.length} episodes in the database. Filter by channel, sort by performance, views, or recency. Use the topic filter pills to narrow down to specific themes like mindset, money, relationships, etc. Each card shows the YouTube thumbnail, title, performance index, view count, and date.</p>
+              </div>
+            </div>
+            <div style={{background:"#FAFAFA",borderRadius:10,padding:16,marginLeft:44}}>
+              <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>KEY ACTIONS</div>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>Click a card</strong> — opens the YouTube video so you can study the thumbnail, title, and packaging</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>Click a topic pill</strong> — filters the entire library to that topic</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>Pin for builder</strong> — selects that specific video as source material for episode generation. Pin multiple to build a custom source set.</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7}}><strong>Use as source</strong> — jumps to Episode Builder with that video pre-loaded as an outlier reference</p>
+            </div>
+          </div>
+
+          <div style={{borderBottom:"1px solid #F3F4F6",paddingBottom:24,marginBottom:24}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#F3E8FF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#7C3AED"}}>2</div>
+              <div>
+                <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Episode Builder (Guest Episode)</h3>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>Enter a guest's name, expertise, and background. The more detail you paste into the background field (bio, achievements, story), the more specific the generated angles will be. The engine matches the guest's background against the entire library to find relevant proven performers.</p>
+              </div>
+            </div>
+            <div style={{background:"#FAFAFA",borderRadius:10,padding:16,marginLeft:44}}>
+              <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>THE WORKFLOW</div>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>1.</strong> Enter guest name, expertise, and paste their full background</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>2.</strong> Optionally filter by topic to narrow the match pool</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>3.</strong> Review the matched episodes. Page through with Next 20 for more source material.</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>4.</strong> Optionally add an outlier video or reference</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>5.</strong> Hit Generate. The AI studies WHY the matched videos performed and applies those patterns to the guest's real background. It does not copy topics. It extracts what made the angle work and builds something authentic to this guest.</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>6.</strong> Review 5 concepts. Each shows the hook, why it works, beats to hit, an opening, and which source video it was pulled from (with thumbnail)</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><strong>7.</strong> Select the best and hit "Present to Doza" for a formatted brief</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7}}><strong>8.</strong> Save standout concepts to the Saved tab for later</p>
+            </div>
+          </div>
+
+          <div style={{borderBottom:"1px solid #F3F4F6",paddingBottom:24,marginBottom:24}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#E0E7FF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#4338CA"}}>3</div>
+              <div>
+                <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Episode Builder (Internal Team)</h3>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>For episodes with no guest. Type what you're thinking about discussing and the engine finds proven episodes that validate your idea. Use these for structural inspiration on how to package and angle the topic.</p>
+              </div>
+            </div>
+            <div style={{background:"#FAFAFA",borderRadius:10,padding:16,marginLeft:44}}>
+              <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>PRO TIP</div>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7}}>Use the matched videos not just for angle inspiration but also for packaging research. Click into the YouTube video, study the thumbnail design and title structure. These videos outperformed their channel's median, which means their packaging worked. Replicate the pattern, not the topic.</p>
+            </div>
+          </div>
+
+          <div style={{borderBottom:"1px solid #F3F4F6",paddingBottom:24,marginBottom:24}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#FEF9C3",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#A16207"}}>4</div>
+              <div>
+                <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Pinning Videos</h3>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>When you find specific videos in the library that you want to recreate or use as source material, pin them. Pinned videos appear at the top of the Episode Builder and are used as primary sources when generating. This lets you hand-pick your source set rather than relying on automatic matching alone. Pin across different channels and topics to get diverse angles.</p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{borderBottom:"1px solid #F3F4F6",paddingBottom:24,marginBottom:24}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#FFE4E6",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#BE123C"}}>5</div>
+              <div>
+                <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Performance Index (PI)</h3>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>The PI score is the ratio of a video's views to its channel's median views. This normalises across channels so you can compare a niche channel's breakout hit with a massive channel's average performer.</p>
+              </div>
+            </div>
+            <div style={{background:"#FAFAFA",borderRadius:10,padding:16,marginLeft:44}}>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><span style={{color:"#38FC1A",fontWeight:700}}>1.5-3x</span> — Solid performer. Above average for that channel.</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7,marginBottom:4}}><span style={{color:"#000",fontWeight:700}}>5-10x</span> — Strong outlier. Something about this topic or angle hit hard.</p>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7}}><span style={{color:"#DC2626",fontWeight:700}}>10x+</span> — Viral. The packaging, topic, and timing all aligned. Study this closely.</p>
+            </div>
+          </div>
+
+          <div style={{borderBottom:"1px solid #F3F4F6",paddingBottom:24,marginBottom:24}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#CCFBF1",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#0F766E"}}>6</div>
+              <div>
+                <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Adding Channels</h3>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>To add a new YouTube channel, go to the GitHub repo, edit <strong>scrape.py</strong>, and add a line to the CHANNELS list: <span style={{fontFamily:"monospace",background:"#F3F4F6",padding:"2px 6px",borderRadius:4,fontSize:12}}>("@HandleName", "Display Name")</span>. Commit the change and run the scraper from the Actions tab.</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#F3F4F6",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#6B7280"}}>7</div>
+              <div>
+                <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Auto-Refresh</h3>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>The scraper runs automatically every Sunday at 8pm AEST via GitHub Actions. It pulls fresh data from all {CHANNELS.length} channels, tags every episode with topics, and deploys to Netlify. You can also trigger a manual scrape anytime from the GitHub Actions tab.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>}
     </div>
   </div>;
