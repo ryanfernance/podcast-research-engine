@@ -54,7 +54,10 @@ CHANNELS = [
     ("@EconomicsExplained", "Economics Explained"),
     ("@TheIcedCoffeeHour", "The Iced Coffee Hour"),
     ("@ChewTheFatPod", "Chew The Fat Pod"),
+    ("@GeronimoUnfilteredOfficial", "Geronimo Unfiltered"),
 ]
+
+OUR_CHANNEL = "Geronimo Unfiltered"
 
 LOOKBACK_DAYS = 730
 MAX_VIDS_PER_CHANNEL = 300
@@ -244,11 +247,15 @@ def main():
             v["med"] = round(med)
             v["pi"] = round(v["views"] / med, 2) if med > 0 else 0
 
-        top = [v for v in videos if v["pi"] >= 1.5]
-        top.sort(key=lambda x: x["pi"], reverse=True)
-        top = top[:20]
-
-        print(f"  Found {len(videos)} episodes (removed {shorts_removed} shorts), {len(top)} above 1.5x (median: {med:,.0f})")
+        if name == OUR_CHANNEL:
+            # Keep ALL our own episodes for insights
+            top = sorted(videos, key=lambda x: x["pi"], reverse=True)
+            print(f"  Found {len(videos)} episodes (removed {shorts_removed} shorts), keeping ALL for insights (median: {med:,.0f})")
+        else:
+            top = [v for v in videos if v["pi"] >= 1.5]
+            top.sort(key=lambda x: x["pi"], reverse=True)
+            top = top[:20]
+            print(f"  Found {len(videos)} episodes (removed {shorts_removed} shorts), {len(top)} above 1.5x (median: {med:,.0f})")
         all_videos.extend(top)
 
     print(f"\n{'=' * 60}")
