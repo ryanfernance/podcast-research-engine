@@ -634,6 +634,50 @@ export default function App(){
                 {topTopics.slice(0,8).map(function(t){var c=TC[t]||{bg:"#F3F4F6",t:"#374151"};return <span key={t} style={{padding:"8px 16px",borderRadius:8,background:c.bg,color:c.t,fontSize:13,fontWeight:600,textTransform:"capitalize"}}>{t.replace(/_/g," ")} ({byTopic[t].count} eps, {fmt(Math.round(byTopic[t].views/byTopic[t].count))} avg)</span>})}
               </div>
             </div>}
+            <div style={{marginBottom:24}}>
+              {!metaInsight["our|"]&&<button className="gbtn" onClick={function(){
+                setMetaLoading(true);
+                var pool=sorted.slice(0,15);
+                var eps_list=pool.map(function(v){return "- \""+v.title+"\" ("+v.pi+"x, "+fmt(v.views)+" views)"}).join("\n");
+                var prompt="You are the executive producer of a top-5 global podcast. Analyze these "+pool.length+" episodes from Geronimo Unfiltered's own channel.\n\n"+eps_list+"\n\n"+(mode==="youtube"?"Focus on YouTube packaging — titles, thumbnail psychology, CTR triggers, watch time hooks.":"Focus on podcast patterns — episode framing, conversational hooks, listener retention.")+"\n\nThis is THEIR OWN channel. Tell them what's working, what isn't, and what to double down on. Be brutally honest like a producer reviewing their own show. JSON only, no other text:\n{\"headline\":\"One bold sentence on Geronimo Unfiltered's performance\",\"patterns\":[{\"name\":\"\",\"description\":\"\"}],\"what_bombs\":\"What's underperforming and why — be specific\",\"title_formula\":\"The title structure that works best for this channel\",\"double_down\":\"What to make more of based on the data\",\"geronimo_playbook\":\"3-4 sentences of brutally specific advice for the next 10 episodes\"}";
+                fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:prompt})}).then(function(r){return r.json()}).then(function(data){
+                  if(data.content&&data.content[0]&&data.content[0].text){
+                    var raw=data.content[0].text.replace(/```json\n?|```\n?/g,"").trim();
+                    try{var parsed=JSON.parse(raw);var updated=Object.assign({},metaInsight);updated["our|"]=parsed;setMetaInsight(updated)}catch(e){var m=raw.match(/\{[\s\S]*\}/);if(m){try{var parsed2=JSON.parse(m[0]);var updated2=Object.assign({},metaInsight);updated2["our|"]=parsed2;setMetaInsight(updated2)}catch(e2){}}}
+                  }
+                  setMetaLoading(false);
+                }).catch(function(){setMetaLoading(false)});
+              }} disabled={metaLoading} style={{maxWidth:400}}>{metaLoading?"Analyzing your channel...":mode==="youtube"?"Analyze our YouTube performance":"Analyze our podcast performance"}</button>}
+              {metaInsight["our|"]&&<div style={{background:"#000",borderRadius:16,padding:28}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                  <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.08em"}}>GERONIMO UNFILTERED — PRODUCER ANALYSIS</div>
+                  <button onClick={function(){var updated=Object.assign({},metaInsight);delete updated["our|"];setMetaInsight(updated)}} style={{fontSize:11,color:"#6B7280",background:"none",border:"none",cursor:"pointer"}}>Refresh</button>
+                </div>
+                <h3 style={{fontSize:20,fontWeight:700,color:"#FFF",lineHeight:1.35,marginBottom:20}}>{metaInsight["our|"].headline}</h3>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:20}}>
+                  {(metaInsight["our|"].patterns||[]).map(function(p,pi){return <div key={pi} style={{background:"#111",borderRadius:10,padding:16,border:"1px solid #29292D"}}>
+                    <div style={{fontSize:12,color:"#38FC1A",fontWeight:700,marginBottom:6}}>{p.name}</div>
+                    <p style={{fontSize:12,color:"#DFDFDF",lineHeight:1.5}}>{p.description}</p>
+                  </div>})}
+                </div>
+                {metaInsight["our|"].what_bombs&&<div style={{background:"#111",borderRadius:10,padding:16,marginBottom:16,border:"1px solid #29292D"}}>
+                  <div style={{fontSize:10,color:"#DC2626",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>WHAT'S NOT WORKING</div>
+                  <p style={{fontSize:13,color:"#DFDFDF",lineHeight:1.55}}>{metaInsight["our|"].what_bombs}</p>
+                </div>}
+                {metaInsight["our|"].title_formula&&<div style={{background:"#111",borderRadius:10,padding:16,marginBottom:16,border:"1px solid #29292D"}}>
+                  <div style={{fontSize:10,color:"#785DD9",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>TITLE FORMULA</div>
+                  <p style={{fontSize:14,color:"#FFF",lineHeight:1.55,fontWeight:500}}>{metaInsight["our|"].title_formula}</p>
+                </div>}
+                {metaInsight["our|"].double_down&&<div style={{background:"#111",borderRadius:10,padding:16,marginBottom:16,border:"1px solid #29292D"}}>
+                  <div style={{fontSize:10,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>DOUBLE DOWN ON</div>
+                  <p style={{fontSize:14,color:"#FFF",lineHeight:1.55}}>{metaInsight["our|"].double_down}</p>
+                </div>}
+                <div style={{background:"#111",borderRadius:10,padding:16,border:"1px solid #38FC1A"}}>
+                  <div style={{fontSize:10,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>NEXT 10 EPISODES PLAYBOOK</div>
+                  <p style={{fontSize:14,color:"#FFF",lineHeight:1.6}}>{metaInsight["our|"].geronimo_playbook}</p>
+                </div>
+              </div>}
+            </div>
             <div style={{fontSize:11,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:12}}>{mode==="youtube"?"ALL EPISODES BY VIEWS — STUDY THE THUMBNAILS AND TITLES":"ALL EPISODES BY VIEWS"}</div>
             <div className="card-grid">{sorted.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(t);setTab("library")}} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===v.id})} onInspect={setInspectVid}/>})}</div>
           </>;
