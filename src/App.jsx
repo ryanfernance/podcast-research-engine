@@ -61,10 +61,10 @@ function findSourceVid(ep, DATA){
   return null;
 }
 
-function VCard({v,i,onTopicClick,onUseAsSource,onPin,isPinned}){
+function VCard({v,i,onTopicClick,onUseAsSource,onPin,isPinned,onInspect}){
   var bg=v.pi>=10?"#DC2626":v.pi>=5?"#000":"#38FC1A";
   return <div className="vcard" style={{animation:"fadeUp 0.4s ease "+Math.min(i*0.03,0.6)+"s both",border:isPinned?"2px solid #38FC1A":"none"}}>
-    <div onClick={function(){window.open("https://youtube.com/watch?v="+v.id,"_blank")}} style={{cursor:"pointer"}}>
+    <div onClick={function(){if(onInspect)onInspect(v);else window.open("https://youtube.com/watch?v="+v.id,"_blank")}} style={{cursor:"pointer"}}>
       <div style={{position:"relative",paddingTop:"56.25%",background:"#F3F4F6",overflow:"hidden"}}>
         <Thumb id={v.id} ch={v.ch}/>
         <div style={{position:"absolute",top:12,right:12,background:bg,color:"#FFF",padding:"4px 10px",borderRadius:8,fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:13,zIndex:2,boxShadow:"0 2px 8px rgba(0,0,0,0.2)"}}>
@@ -92,7 +92,7 @@ function VCard({v,i,onTopicClick,onUseAsSource,onPin,isPinned}){
   </div>;
 }
 
-function EpCard({ep,i,on,toggle,DATA,onSave}){
+function EpCard({ep,i,on,toggle,DATA,onSave,onFindClient,clientResults,clientLoading,onPickClient}){
   var [open,setOpen]=useState(false);
   var srcVid=findSourceVid(ep,DATA);
   return <div className={"epc "+(on?"on":"")}>
@@ -128,8 +128,24 @@ function EpCard({ep,i,on,toggle,DATA,onSave}){
         </div>}
       </div>}
     </div>}
-    {onSave&&<div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #F3F4F6"}}>
-      <button onClick={function(e){e.stopPropagation();onSave(ep)}} style={{fontSize:11,color:"#38FC1A",fontWeight:600,background:"none",border:"none",cursor:"pointer",padding:0}}>&#9733; Save concept</button>
+    <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #F3F4F6",display:"flex",gap:12,flexWrap:"wrap"}}>
+      {onSave&&<button onClick={function(e){e.stopPropagation();onSave(ep)}} style={{fontSize:11,color:"#38FC1A",fontWeight:600,background:"none",border:"none",cursor:"pointer",padding:0}}>&#9733; Save concept</button>}
+      {onFindClient&&<button onClick={function(e){e.stopPropagation();onFindClient(i,ep)}} disabled={clientLoading} style={{fontSize:11,color:"#785DD9",fontWeight:600,background:"none",border:"none",cursor:"pointer",padding:0}}>{clientLoading?"Searching...":"&#128269; Find a client for this angle"}</button>}
+    </div>
+    {clientResults&&clientResults.length>0&&<div style={{marginTop:12,background:"#F9F5FF",borderRadius:10,padding:16,border:"1px solid #E9D5FF"}}>
+      <div style={{fontSize:11,color:"#785DD9",fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>CLIENT GUEST CANDIDATES</div>
+      {clientResults.map(function(s,ci){return <div key={s.id} style={{display:"flex",gap:10,alignItems:"center",background:"#FFF",borderRadius:8,padding:"8px 12px",marginBottom:6,cursor:"pointer",border:"1px solid #F3F4F6"}} onClick={function(e){e.stopPropagation();if(onPickClient)onPickClient(s,ep)}}>
+        <div style={{flex:"0 0 24px",height:24,borderRadius:6,background:"#785DD9",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:11,fontWeight:700}}>{ci+1}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:13,fontWeight:600,color:"#111"}}>{s.owner||s.name}</div>
+          <div style={{fontSize:11,color:"#9CA3AF"}}>{s.name}{s.type?" · "+s.type:""}{s.location?" · "+s.location:""}</div>
+        </div>
+        <div style={{textAlign:"right",flexShrink:0}}>
+          {s.revenue>0&&<div style={{fontSize:13,fontWeight:700,color:"#785DD9"}}>${fmt(s.revenue)}/mo</div>}
+          {s.members>0&&<div style={{fontSize:10,color:"#9CA3AF"}}>{s.members} members</div>}
+        </div>
+      </div>})}
+      <p style={{fontSize:10,color:"#9CA3AF",marginTop:6}}>Click a client to load them as the guest for this angle.</p>
     </div>}
   </div>;
 }
@@ -195,6 +211,82 @@ function DozaBrief({sel,eps,gName,gDesc,gBg,intContext,isInt,onClose,DATA}){
   </div>;
 }
 
+function InsightModal({v,mode,onClose,onPin,isPinned,onUseAsSource}){
+  var [insight,setInsight]=useState(null);
+  var [loading,setLoading]=useState(true);
+  var [err,setErr]=useState("");
+  useEffect(function(){
+    setLoading(true);setInsight(null);setErr("");
+    var prompt="You are the executive producer of a top-5 global podcast. You've produced thousands of episodes and understand exactly why certain episodes break out.\n\nAnalyze this episode that performed "+v.pi+"x its channel's median ("+fmt(v.views)+" views vs "+fmt(v.med)+" median):\n\nTitle: \""+v.title+"\"\nChannel: "+v.ch+"\nTopics: "+(v.topics||[]).join(", ")+"\nDate: "+v.date+"\n\n"+(mode==="youtube"?"FORMAT: YouTube video. Focus on packaging (title + thumbnail), click-through psychology, watch time structure, and visual storytelling patterns.":"FORMAT: Audio podcast. Focus on conversational hooks, listener retention, episode structure, and why someone stays for the full episode.")+"\n\nGive your producer breakdown. JSON only, no other text:\n{\"why_it_worked\":\"2-3 sentences on why this specific title/angle outperformed\",\"packaging_pattern\":\"What pattern the title uses (curiosity gap, contrarian, specificity, authority, urgency, etc) and why it triggers clicks\",\"tension\":\"The core tension or conflict that drives engagement\",\"audience_psychology\":\"What need or desire this taps into in the viewer/listener\",\"steal_this\":\"The ONE transferable insight Geronimo Unfiltered should take from this episode. Be specific and actionable.\",\"geronimo_angle\":\"How Doza could adapt this exact pattern for Geronimo's audience of studio owners and operators. Give a specific title example.\"}";
+    fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:prompt})}).then(function(r){return r.json()}).then(function(data){
+      if(!data.content||!data.content[0]||!data.content[0].text){setErr("Empty response");setLoading(false);return}
+      var raw=data.content[0].text.replace(/```json\n?|```\n?/g,"").trim();
+      try{setInsight(JSON.parse(raw))}catch(e){var m=raw.match(/\{[\s\S]*\}/);if(m){try{setInsight(JSON.parse(m[0]))}catch(e2){setErr("Parse error")}}else{setErr("Parse error")}}
+      setLoading(false);
+    }).catch(function(e){setErr(e.message);setLoading(false)});
+  },[v.id]);
+  var bg=v.pi>=10?"#DC2626":v.pi>=5?"#000":"#38FC1A";
+  return <div style={{position:"fixed",inset:0,zIndex:100,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(12px)"}} onClick={onClose}>
+    <div style={{background:"#FFF",borderRadius:20,maxWidth:720,width:"100%",maxHeight:"90vh",overflow:"auto",padding:0,position:"relative",boxShadow:"0 32px 80px rgba(0,0,0,0.15)",animation:"fadeUp 0.3s ease"}} onClick={function(e){e.stopPropagation()}}>
+      <button onClick={onClose} style={{position:"absolute",top:16,right:16,background:"rgba(0,0,0,0.6)",border:"none",width:36,height:36,borderRadius:10,fontSize:18,color:"#FFF",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>&#10005;</button>
+      <div style={{position:"relative",paddingTop:"50%",background:"#111",borderRadius:"20px 20px 0 0",overflow:"hidden"}}>
+        <Thumb id={v.id} ch={v.ch}/>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(transparent,rgba(0,0,0,0.9))",padding:"40px 24px 20px"}}>
+          <div style={{display:"inline-block",background:bg,color:"#FFF",padding:"4px 12px",borderRadius:8,fontWeight:700,fontSize:14,marginBottom:10}}>{v.pi>=100?v.pi.toFixed(0):v.pi.toFixed(1)}x performance</div>
+          <h2 style={{fontSize:22,fontWeight:700,color:"#FFF",lineHeight:1.3}}>{v.title}</h2>
+          <div style={{display:"flex",gap:16,marginTop:10}}>
+            <span style={{color:"#38FC1A",fontSize:12,fontWeight:600}}>{v.ch}</span>
+            <span style={{color:"#9CA3AF",fontSize:12}}>{fmt(v.views)} views</span>
+            <span style={{color:"#9CA3AF",fontSize:12}}>Median: {fmt(v.med)}</span>
+            <span style={{color:"#9CA3AF",fontSize:12}}>{v.date?v.date.slice(0,10):""}</span>
+          </div>
+        </div>
+      </div>
+      <div style={{padding:24}}>
+        <div style={{display:"flex",gap:8,marginBottom:24,flexWrap:"wrap"}}>
+          <button onClick={function(){window.open("https://youtube.com/watch?v="+v.id,"_blank")}} style={{padding:"10px 20px",borderRadius:8,border:"none",background:"#DC2626",color:"#FFF",fontSize:13,fontWeight:600,cursor:"pointer"}}>&#9654; Watch on YouTube</button>
+          <button onClick={function(){if(onPin)onPin(v)}} className="rbtn" style={{borderColor:isPinned?"#38FC1A":"",color:isPinned?"#38FC1A":""}}>{isPinned?"Unpin":"Pin for builder"}</button>
+          <button onClick={function(){if(onUseAsSource)onUseAsSource(v);onClose()}} className="rbtn">Use as source</button>
+        </div>
+        {loading&&<div style={{textAlign:"center",padding:"40px 20px"}}>
+          <div style={{fontSize:13,color:"#9CA3AF",marginBottom:8}}>Analyzing as a top podcast producer...</div>
+          <div style={{width:200,height:4,background:"#F3F4F6",borderRadius:2,margin:"0 auto",overflow:"hidden"}}><div style={{width:"60%",height:"100%",background:"#38FC1A",borderRadius:2,animation:"shimmer 1.5s infinite"}}/></div>
+        </div>}
+        {err&&<div style={{background:"#FEF2F2",borderRadius:10,padding:14,color:"#DC2626",fontSize:13}}>{err}</div>}
+        {insight&&<div>
+          <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.08em",marginBottom:16}}>PRODUCER BREAKDOWN</div>
+          <div style={{background:"#000",borderRadius:12,padding:20,marginBottom:16}}>
+            <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>WHY IT WORKED</div>
+            <p style={{fontSize:15,color:"#FFF",lineHeight:1.6}}>{insight.why_it_worked}</p>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+            <div style={{background:"#FAFAFA",borderRadius:10,padding:16}}>
+              <div style={{fontSize:10,color:"#785DD9",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>PACKAGING PATTERN</div>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.55}}>{insight.packaging_pattern}</p>
+            </div>
+            <div style={{background:"#FAFAFA",borderRadius:10,padding:16}}>
+              <div style={{fontSize:10,color:"#DC2626",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>CORE TENSION</div>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.55}}>{insight.tension}</p>
+            </div>
+          </div>
+          <div style={{background:"#FAFAFA",borderRadius:10,padding:16,marginBottom:16}}>
+            <div style={{fontSize:10,color:"#A16207",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>AUDIENCE PSYCHOLOGY</div>
+            <p style={{fontSize:13,color:"#374151",lineHeight:1.55}}>{insight.audience_psychology}</p>
+          </div>
+          <div style={{background:"#F0FDF4",borderRadius:10,padding:16,marginBottom:16,border:"1px solid #DCFCE7"}}>
+            <div style={{fontSize:10,color:"#166534",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>STEAL THIS</div>
+            <p style={{fontSize:14,color:"#111",lineHeight:1.55,fontWeight:500}}>{insight.steal_this}</p>
+          </div>
+          <div style={{background:"#000",borderRadius:10,padding:16,border:"1px solid #38FC1A"}}>
+            <div style={{fontSize:10,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>GERONIMO ANGLE</div>
+            <p style={{fontSize:14,color:"#FFF",lineHeight:1.55}}>{insight.geronimo_angle}</p>
+          </div>
+        </div>}
+      </div>
+    </div>
+  </div>;
+}
+
 function smartMatch(DATA, gName, gDesc, gBg, gTopics) {
   var allText = (gName + " " + gDesc + " " + gBg).toLowerCase();
   var words = allText.split(/\s+/).filter(function(w){return w.length > 3 && !["this","that","with","from","they","their","have","been","will","would","about","which","there","these","those","other","into","also","than","more","some","very","just","when","what","really","people","every","thing","make","know","want","like","good","best","most","over","only","back","first","years","could","should","being","after","going","through","doing","still","getting","around"].includes(w)});
@@ -248,9 +340,31 @@ export default function App(){
   var [matchPage,setMatchPage]=useState(0);
   var [saved,setSaved]=useState([]);
   var [pinned,setPinned]=useState([]);
-  var [isClient,setIsClient]=useState(false);
-  var [clientResults,setClientResults]=useState([]);
-  var [clientLoading,setClientLoading]=useState(false);
+  var [clientResults,setClientResults]=useState({});
+  var [clientLoading,setClientLoading]=useState(-1);
+  var [inspectVid,setInspectVid]=useState(null);
+
+  var findClientForAngle=async function(idx,ep){
+    setClientLoading(idx);
+    try{
+      var res=await fetch("/.netlify/functions/client-search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:ep.title+" "+ep.hook,metric:"revenue"})});
+      var data=await res.json();
+      if(data.studios){
+        var updated=Object.assign({},clientResults);
+        updated[idx]=data.studios;
+        setClientResults(updated);
+      }else{setError(data.error||"No client results")}
+    }catch(e){setError("Client search failed: "+e.message)}
+    setClientLoading(-1);
+  };
+
+  var pickClientForAngle=function(studio,ep){
+    setGName(studio.owner||studio.name);
+    setGDesc(studio.type||"Studio owner");
+    setGBg(studio.name+" — "+(studio.type||"studio")+" in "+(studio.location||"AU")+". "+(studio.revenue?"$"+fmt(studio.revenue)+"/mo revenue. ":"")+(studio.members?studio.members+" active members. ":"")+"Program: "+(studio.program||"MDS")+". Client since "+(studio.kickoff||"unknown")+". Episode angle: "+ep.title+" — "+ep.hook);
+    setIsInt(false);
+    setEps([]);setSel([]);setClientResults({});
+  };
   var [mode,setMode]=useState("youtube");
 
   useEffect(function(){
@@ -350,7 +464,7 @@ export default function App(){
     setLoading(false);
   };
 
-  var canGen=!isClient&&(isInt?(intContext||gTopics.length>0)&&(allMatched.length>0||pinned.length>0):gName&&gBg&&(allMatched.length>0||pinned.length>0));
+  var canGen=isInt?(intContext||gTopics.length>0)&&(allMatched.length>0||pinned.length>0):gName&&gBg&&(allMatched.length>0||pinned.length>0);
   var genLabel=pinned.length>0?"Generating from "+pinned.length+" pinned"+(matched.length>0?" + matches "+(matchPage*20+1)+"-"+Math.min((matchPage+1)*20,allMatched.length):""):"Generating from matches "+(matchPage*20+1)+"-"+Math.min((matchPage+1)*20,allMatched.length);
 
   if(loadingData)return <div style={{minHeight:"100vh",background:"#000",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -391,6 +505,7 @@ export default function App(){
     <style>{CSS}</style>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet"/>
     {showBrief&&<DozaBrief sel={sel} eps={eps} gName={gName} gDesc={gDesc} gBg={gBg} intContext={intContext} isInt={isInt} onClose={function(){setShowBrief(false)}} DATA={DATA}/>}
+    {inspectVid&&<InsightModal v={inspectVid} mode={mode} onClose={function(){setInspectVid(null)}} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===inspectVid.id})} onUseAsSource={useAsSource}/>}
 
     <div style={{background:"#000",padding:"18px 28px"}}>
       <div style={{maxWidth:1320,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
@@ -436,7 +551,7 @@ export default function App(){
             {fTp!=="all"&&<span onClick={function(){setFTp("all")}} style={{fontSize:12,color:"#9CA3AF",cursor:"pointer",padding:"6px 14px",display:"flex",alignItems:"center"}}>Clear</span>}
           </div>
         </div>
-        <div className="card-grid">{filtered.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(fTp===t?"all":t)}} onUseAsSource={useAsSource} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===v.id})}/>})}</div>
+        <div className="card-grid">{filtered.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(fTp===t?"all":t)}} onUseAsSource={useAsSource} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===v.id})} onInspect={setInspectVid}/>})}</div>
       </>}
 
       {tab==="our"&&<div style={{maxWidth:1320,margin:"0 auto"}}>
@@ -471,17 +586,17 @@ export default function App(){
               </div>
             </div>}
             <div style={{fontSize:11,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:12}}>{mode==="youtube"?"ALL EPISODES BY VIEWS — STUDY THE THUMBNAILS AND TITLES":"ALL EPISODES BY VIEWS"}</div>
-            <div className="card-grid">{sorted.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(t);setTab("library")}} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===v.id})}/>})}</div>
+            <div className="card-grid">{sorted.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(t);setTab("library")}} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===v.id})} onInspect={setInspectVid}/>})}</div>
           </>;
         })()}
       </div>}
 
       {tab==="builder"&&<div style={{maxWidth:720,margin:"0 auto"}}>
         <div style={{display:"inline-flex",background:"#F3F4F6",borderRadius:12,padding:4,marginBottom:28}}>
-          {[{v:"guest",l:"Guest Episode"},{v:"internal",l:"Internal Team"},{v:"client",l:"Client Guest"}].map(function(o){return <button key={o.l} onClick={function(){setIsInt(o.v==="internal");setIsClient(o.v==="client");setEps([]);setSel([]);setMatchPage(0)}} style={{padding:"10px 24px",border:"none",borderRadius:10,background:(o.v==="guest"&&!isInt&&!isClient)||(o.v==="internal"&&isInt)||(o.v==="client"&&isClient)?"#000":"transparent",color:(o.v==="guest"&&!isInt&&!isClient)||(o.v==="internal"&&isInt)||(o.v==="client"&&isClient)?"#38FC1A":"#9CA3AF",fontWeight:600,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>{o.l}</button>})}
+          {[{v:"guest",l:"Guest Episode"},{v:"internal",l:"Internal Team"}].map(function(o){return <button key={o.l} onClick={function(){setIsInt(o.v==="internal");setEps([]);setSel([]);setMatchPage(0)}} style={{padding:"10px 24px",border:"none",borderRadius:10,background:(o.v==="guest"&&!isInt)||(o.v==="internal"&&isInt)?"#000":"transparent",color:(o.v==="guest"&&!isInt)||(o.v==="internal"&&isInt)?"#38FC1A":"#9CA3AF",fontWeight:600,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>{o.l}</button>})}
         </div>
 
-        {!isInt&&!isClient&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+        {!isInt&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
           <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:12}}>THE GUEST</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
             <input className="fi" value={gName} onChange={function(e){setGName(e.target.value);setEps([]);setSel([])}} placeholder="Guest name"/>
@@ -496,49 +611,16 @@ export default function App(){
           <textarea className="ta" value={intContext} onChange={function(e){setIntContext(e.target.value);setEps([]);setSel([]);setMatchPage(0)}} placeholder="What topic, theme, or idea are you considering? The engine will find proven episodes that validate your idea."/>
         </div>}
 
-        {isClient&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
-          <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>CLIENT GUEST FINDER</div>
-          <p style={{fontSize:13,color:"#6B7280",lineHeight:1.55,marginBottom:16}}>Search your client database for podcast guest candidates. The engine queries Airtable for active studios and ranks them by performance data. Enter a topic and the matched proven episodes + client data will generate episode concepts featuring your real clients.</p>
-          <textarea className="ta" value={intContext} onChange={function(e){setIntContext(e.target.value);setEps([]);setSel([]);setMatchPage(0)}} placeholder="What topic do you want the client episode to cover? E.g. 'How they went from 80 to 200 members in 6 months' or 'Breaking through the $30k/month revenue ceiling'"/>
-          <div style={{marginTop:14}}>
-            <button className="gbtn" onClick={async function(){
-              setClientLoading(true);setClientResults([]);
-              try{
-                var res=await fetch("/.netlify/functions/client-search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:intContext,metric:"revenue"})});
-                var data=await res.json();
-                if(data.studios)setClientResults(data.studios);
-                else setError(data.error||"No results");
-              }catch(e){setError("Client search failed: "+e.message)}
-              setClientLoading(false);
-            }} disabled={clientLoading} style={{marginBottom:0}}>{clientLoading?"Searching clients...":"Find Guest Candidates"}</button>
-          </div>
-          {clientResults.length>0&&<div style={{marginTop:20}}>
-            <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>TOP GUEST CANDIDATES ({clientResults.length})</div>
-            {clientResults.map(function(s,i){return <div key={s.id} style={{display:"flex",gap:12,alignItems:"center",background:"#FAFAFA",borderRadius:10,padding:"12px 16px",marginBottom:8,border:"1px solid #F3F4F6",cursor:"pointer"}} onClick={function(){setGName(s.owner||s.name);setGBg(s.name+" — "+s.type+" in "+(s.location||"AU")+". "+(s.revenue?"$"+fmt(s.revenue)+"/mo revenue. ":"")+(s.members?s.members+" active members. ":"")+"Program: "+s.program+". Client since "+(s.kickoff||"unknown")+".");setIsClient(false);setIsInt(false);setEps([]);setSel([])}}>
-              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",color:"#38FC1A",fontSize:14,fontWeight:700}}>{i+1}</div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:14,fontWeight:600,color:"#111"}}>{s.owner||s.name}</div>
-                <div style={{fontSize:12,color:"#9CA3AF"}}>{s.name}{s.type?" · "+s.type:""}{s.location?" · "+s.location:""}</div>
-              </div>
-              <div style={{textAlign:"right",flexShrink:0}}>
-                {s.revenue>0&&<div style={{fontSize:14,fontWeight:700,color:"#38FC1A"}}>${fmt(s.revenue)}/mo</div>}
-                {s.members>0&&<div style={{fontSize:11,color:"#9CA3AF"}}>{s.members} members</div>}
-              </div>
-            </div>})}
-            <p style={{fontSize:11,color:"#9CA3AF",marginTop:8}}>Click a client to load them as a guest in the Episode Builder.</p>
-          </div>}
-        </div>}
-
-        {!isClient&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+        <div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
           <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>FILTER BY TOPIC</div>
           <div style={{fontSize:12,color:"#9CA3AF",marginBottom:12}}>Select topics to filter matches from the full {DATA.length} episode library.</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {TOPICS.map(function(t){var on=gTopics.includes(t);var c=TC[t]||{bg:"#F3F4F6",t:"#374151"};
               return <button key={t} onClick={function(){toggleTopic(t)}} style={{padding:"8px 16px",borderRadius:8,border:on?"2px solid "+c.t:"1px solid #E5E7EB",background:on?c.bg:"#FFF",color:on?c.t:"#9CA3AF",fontSize:13,fontWeight:on?600:500,cursor:"pointer",outline:"none",transition:"all 0.15s",textTransform:"capitalize"}}>{t.replace(/_/g," ")} <span style={{opacity:0.5,fontSize:11}}>({topicCounts[t]||0})</span></button>})}
           </div>
-        </div>}
+        </div>
 
-        {!isClient&&pinned.length>0&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",border:"1px solid #38FC1A"}}>
+        {pinned.length>0&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",border:"1px solid #38FC1A"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em"}}>PINNED FROM LIBRARY ({pinned.length})</div>
             <button className="rbtn" onClick={function(){setPinned([]);setEps([]);setSel([])}}>Clear all pins</button>
@@ -554,7 +636,7 @@ export default function App(){
           </div>})}
         </div>}
 
-        {!isClient&&allMatched.length>0&&<div style={{marginBottom:20}}>
+        {allMatched.length>0&&<div style={{marginBottom:20}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <div style={{fontSize:11,color:"#D1D5DB",fontWeight:700,letterSpacing:"0.06em"}}>SHOWING {matchPage*20+1}-{Math.min((matchPage+1)*20,allMatched.length)} OF {allMatched.length} MATCHES</div>
             <div style={{display:"flex",gap:8}}>
@@ -589,7 +671,7 @@ export default function App(){
             <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em"}}>SELECT CONCEPTS</div>
             {sel.length>0&&<button onClick={function(){setShowBrief(true)}} style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#000",color:"#38FC1A",fontSize:13,fontWeight:600,cursor:"pointer"}}>Present to Doza ({sel.length})</button>}
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>{eps.map(function(ep,i){return <EpCard key={i} ep={ep} i={i} on={sel.includes(i)} toggle={function(){toggleSel(i)}} DATA={DATA} onSave={doSave}/>})}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>{eps.map(function(ep,i){return <EpCard key={i} ep={ep} i={i} on={sel.includes(i)} toggle={function(){toggleSel(i)}} DATA={DATA} onSave={doSave} onFindClient={findClientForAngle} clientResults={clientResults[i]||null} clientLoading={clientLoading===i} onPickClient={pickClientForAngle}/>})}</div>
           <button onClick={function(){setEps([]);setSel([])}} style={{marginTop:20,padding:"10px 20px",borderRadius:10,border:"1px solid #E5E7EB",background:"#FFF",color:"#9CA3AF",fontSize:13,fontWeight:500,cursor:"pointer"}}>Regenerate</button>
         </div>}
       </div>}
@@ -783,7 +865,7 @@ export default function App(){
               <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#38FC1A"}}>8</div>
               <div>
                 <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Client Guest Finder</h3>
-                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>The third mode in Episode Builder. Instead of manually asking the team for guest ideas, the engine queries your Airtable client database and surfaces the top studios ranked by performance data (revenue, members). Enter a topic, hit "Find Guest Candidates," and the top 20 clients appear ranked. Click any client to auto-load them as a guest with their studio data pre-filled in the Episode Builder.</p>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>After generating concepts, each one has a "Find a client for this angle" button. Click it and the engine queries your Airtable client database for active studios ranked by performance data. The top candidates appear right on the concept card. Click any client to load them as the guest with the angle pre-filled. The flow is: generate the angle first from proven data, then find the client who fits it.</p>
               </div>
             </div>
             <div style={{background:"#FAFAFA",borderRadius:10,padding:16,marginLeft:44}}>
