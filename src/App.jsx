@@ -343,6 +343,8 @@ export default function App(){
   var [clientResults,setClientResults]=useState({});
   var [clientLoading,setClientLoading]=useState(-1);
   var [inspectVid,setInspectVid]=useState(null);
+  var [metaInsight,setMetaInsight]=useState({});
+  var [metaLoading,setMetaLoading]=useState(false);
 
   var findClientForAngle=async function(idx,ep){
     setClientLoading(idx);
@@ -467,6 +469,25 @@ export default function App(){
   var canGen=isInt?(intContext||gTopics.length>0)&&(allMatched.length>0||pinned.length>0):gName&&gBg&&(allMatched.length>0||pinned.length>0);
   var genLabel=pinned.length>0?"Generating from "+pinned.length+" pinned"+(matched.length>0?" + matches "+(matchPage*20+1)+"-"+Math.min((matchPage+1)*20,allMatched.length):""):"Generating from matches "+(matchPage*20+1)+"-"+Math.min((matchPage+1)*20,allMatched.length);
 
+  var metaKey=fCh+"|"+fTp;
+  var generateMeta=async function(){
+    if(metaInsight[metaKey])return;
+    setMetaLoading(true);
+    var pool=[].concat(filtered).sort(function(a,b){return b.pi-a.pi}).slice(0,15);
+    var label=fCh!=="all"?fCh:(fTp!=="all"?fTp.replace(/_/g," "):"all top performers");
+    var eps_list=pool.map(function(v){return "- \""+v.title+"\" ("+v.ch+", "+v.pi+"x, "+fmt(v.views)+" views)"}).join("\n");
+    var prompt="You are the executive producer of a top-5 global podcast. Analyze these "+pool.length+" top-performing episodes"+(fCh!=="all"?" from "+fCh:"")+(fTp!=="all"?" on the topic of "+fTp.replace(/_/g," "):"")+".\n\n"+eps_list+"\n\n"+(mode==="youtube"?"Focus on YouTube packaging patterns — titles, thumbnail psychology, CTR triggers, watch time hooks.":"Focus on podcast patterns — episode framing, conversational hooks, guest chemistry, listener retention.")+"\n\nGive a meta-analysis. JSON only, no other text:\n{\"headline\":\"One bold sentence summarising what works"+(fCh!=="all"?" for "+fCh:"")+"\",\"patterns\":[{\"name\":\"\",\"description\":\"\"}],\"what_bombs\":\"\",\"title_formula\":\"\",\"geronimo_playbook\":\"3-4 sentences of specific, actionable advice for Geronimo Unfiltered based on these patterns\"}";
+    try{
+      var res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:prompt})});
+      var data=await res.json();
+      if(data.content&&data.content[0]&&data.content[0].text){
+        var raw=data.content[0].text.replace(/```json\n?|```\n?/g,"").trim();
+        try{var parsed=JSON.parse(raw);var updated=Object.assign({},metaInsight);updated[metaKey]=parsed;setMetaInsight(updated)}catch(e){var m=raw.match(/\{[\s\S]*\}/);if(m){try{var parsed2=JSON.parse(m[0]);var updated2=Object.assign({},metaInsight);updated2[metaKey]=parsed2;setMetaInsight(updated2)}catch(e2){}}}
+      }
+    }catch(e){}
+    setMetaLoading(false);
+  };
+
   if(loadingData)return <div style={{minHeight:"100vh",background:"#000",display:"flex",alignItems:"center",justifyContent:"center"}}>
     <div style={{textAlign:"center"}}>
       <div style={{width:48,height:48,borderRadius:12,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
@@ -550,6 +571,34 @@ export default function App(){
             {TOPICS.map(function(t){var c=TC[t]||{bg:"#F3F4F6",t:"#374151"};var on=fTp===t;return <span key={t} className="tpill" onClick={function(){setFTp(on?"all":t)}} style={{background:on?c.t:c.bg,color:on?"#FFF":c.t,border:on?"2px solid "+c.t:"1px solid transparent"}}>{t.replace(/_/g," ")} <span style={{opacity:0.6,marginLeft:4,fontSize:10}}>({topicCounts[t]||0})</span></span>})}
             {fTp!=="all"&&<span onClick={function(){setFTp("all")}} style={{fontSize:12,color:"#9CA3AF",cursor:"pointer",padding:"6px 14px",display:"flex",alignItems:"center"}}>Clear</span>}
           </div>
+        </div>
+        <div style={{marginBottom:24}}>
+          {!metaInsight[metaKey]&&<button className="gbtn" onClick={generateMeta} disabled={metaLoading} style={{marginBottom:0,maxWidth:360}}>{metaLoading?"Analyzing patterns...":fCh!=="all"?"Analyze "+fCh+"'s patterns":fTp!=="all"?"Analyze "+fTp.replace(/_/g," ")+" patterns":"Analyze what's working across all channels"}</button>}
+          {metaInsight[metaKey]&&<div style={{background:"#000",borderRadius:16,padding:28,marginBottom:0}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.08em"}}>{fCh!=="all"?fCh.toUpperCase()+" — PRODUCER ANALYSIS":fTp!=="all"?fTp.replace(/_/g," ").toUpperCase()+" — PRODUCER ANALYSIS":"CROSS-LIBRARY PRODUCER ANALYSIS"}</div>
+              <button onClick={function(){var updated=Object.assign({},metaInsight);delete updated[metaKey];setMetaInsight(updated)}} style={{fontSize:11,color:"#6B7280",background:"none",border:"none",cursor:"pointer"}}>Refresh</button>
+            </div>
+            <h3 style={{fontSize:20,fontWeight:700,color:"#FFF",lineHeight:1.35,marginBottom:20}}>{metaInsight[metaKey].headline}</h3>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:20}}>
+              {(metaInsight[metaKey].patterns||[]).map(function(p,pi){return <div key={pi} style={{background:"#111",borderRadius:10,padding:16,border:"1px solid #29292D"}}>
+                <div style={{fontSize:12,color:"#38FC1A",fontWeight:700,marginBottom:6}}>{p.name}</div>
+                <p style={{fontSize:12,color:"#DFDFDF",lineHeight:1.5}}>{p.description}</p>
+              </div>})}
+            </div>
+            {metaInsight[metaKey].what_bombs&&<div style={{background:"#111",borderRadius:10,padding:16,marginBottom:16,border:"1px solid #29292D"}}>
+              <div style={{fontSize:10,color:"#DC2626",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>WHAT DOESN'T WORK</div>
+              <p style={{fontSize:13,color:"#DFDFDF",lineHeight:1.55}}>{metaInsight[metaKey].what_bombs}</p>
+            </div>}
+            {metaInsight[metaKey].title_formula&&<div style={{background:"#111",borderRadius:10,padding:16,marginBottom:16,border:"1px solid #29292D"}}>
+              <div style={{fontSize:10,color:"#785DD9",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>TITLE FORMULA</div>
+              <p style={{fontSize:14,color:"#FFF",lineHeight:1.55,fontWeight:500}}>{metaInsight[metaKey].title_formula}</p>
+            </div>}
+            <div style={{background:"#111",borderRadius:10,padding:16,border:"1px solid #38FC1A"}}>
+              <div style={{fontSize:10,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>GERONIMO PLAYBOOK</div>
+              <p style={{fontSize:14,color:"#FFF",lineHeight:1.6}}>{metaInsight[metaKey].geronimo_playbook}</p>
+            </div>
+          </div>}
         </div>
         <div className="card-grid">{filtered.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(fTp===t?"all":t)}} onUseAsSource={useAsSource} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===v.id})} onInspect={setInspectVid}/>})}</div>
       </>}
