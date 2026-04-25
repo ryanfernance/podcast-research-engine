@@ -248,6 +248,10 @@ export default function App(){
   var [matchPage,setMatchPage]=useState(0);
   var [saved,setSaved]=useState([]);
   var [pinned,setPinned]=useState([]);
+  var [isClient,setIsClient]=useState(false);
+  var [clientResults,setClientResults]=useState([]);
+  var [clientLoading,setClientLoading]=useState(false);
+  var [mode,setMode]=useState("youtube");
 
   useEffect(function(){
     fetch("/data.json").then(function(r){return r.json()}).then(function(d){setDATA(d);setLoadingData(false)}).catch(function(){setLoadingData(false)});
@@ -328,11 +332,12 @@ export default function App(){
     var autoCtx=matched.filter(function(v){return!pinned.some(function(p){return p.id===v.id})}).slice(0,Math.max(2,8-pinned.length)).map(function(v){return "- ["+v.id+"] \""+v.title+"\" ("+v.ch+", "+v.pi+"x)"}).join("\n");
     var ctx=pinnedCtx+(pinnedCtx&&autoCtx?"\n":"")+autoCtx;
     var refBlock=customRef?"\nOutlier ref: "+customRef.slice(0,200):"";
+    var modeCtx=mode==="youtube"?"FORMAT: YouTube video. Optimise for: click-through rate (thumbnail + title packaging), watch time retention, shareability. Each concept needs a scroll-stopping title, a thumbnail concept description, and beats structured for visual storytelling. Think about pattern interrupts, visual hooks, and retention pacing.":"FORMAT: Audio podcast. Optimise for: compelling audio hooks, conversational flow, listener retention through the full episode. Each concept needs an ear-catching title, a strong cold open, and beats structured for conversation depth.";
     var promptText="";
     if(isInt){
-      promptText="Geronimo Unfiltered Podcast. Host: Doza, a straight-talking business operator.\n\nDoza wants to record an INTERNAL episode (no guest) about this topic:\n"+intContext.slice(0,300)+"\n\nBelow are proven videos on related themes. Study WHY they worked and apply those PATTERNS to Doza's take. Each concept MUST reference which specific video it was pulled from using the [ID] in brackets.\n\n5 concepts. JSON only, no other text. Include source_id field with the video ID from the brackets:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\",\"source_id\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
+      promptText="Geronimo Unfiltered. Host: Doza, a straight-talking business operator.\n"+modeCtx+"\n\nDoza wants to record an INTERNAL episode (no guest) about this topic:\n"+intContext.slice(0,300)+"\n\nBelow are proven videos on related themes. Study WHY they worked and apply those PATTERNS to Doza's take. Each concept MUST reference which specific video it was pulled from using the [ID] in brackets.\n\n5 concepts. JSON only, no other text. Include source_id field with the video ID from the brackets:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\",\"source_id\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
     }else{
-      promptText="Geronimo Unfiltered Podcast. Host: Doza.\n\nGuest: "+gName+" ("+gDesc+")\nBio: "+gBg.slice(0,300)+"\n\nBelow are proven videos. DO NOT copy their topics. Study WHY they worked and apply those PATTERNS to this guest's real background. Each concept MUST reference which specific video it was pulled from using the [ID] in brackets.\n\n5 concepts. JSON only, no other text. Include source_id field with the video ID from the brackets:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\",\"source_id\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
+      promptText="Geronimo Unfiltered. Host: Doza.\n"+modeCtx+"\n\nGuest: "+gName+" ("+gDesc+")\nBio: "+gBg.slice(0,300)+"\n\nBelow are proven videos. DO NOT copy their topics. Study WHY they worked and apply those PATTERNS to this guest's real background. Each concept MUST reference which specific video it was pulled from using the [ID] in brackets.\n\n5 concepts. JSON only, no other text. Include source_id field with the video ID from the brackets:\n[{\"title\":\"\",\"hook\":\"\",\"why_it_works\":\"\",\"beats\":[\"\",\"\",\"\",\"\"],\"opening\":\"\",\"source\":\"\",\"source_id\":\"\"}]\n\nProven patterns:\n"+ctx+refBlock;
     }
     try{
       var res=await fetch("/.netlify/functions/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:promptText})});
@@ -345,7 +350,7 @@ export default function App(){
     setLoading(false);
   };
 
-  var canGen=isInt?(intContext||gTopics.length>0)&&(allMatched.length>0||pinned.length>0):gName&&gBg&&(allMatched.length>0||pinned.length>0);
+  var canGen=!isClient&&(isInt?(intContext||gTopics.length>0)&&(allMatched.length>0||pinned.length>0):gName&&gBg&&(allMatched.length>0||pinned.length>0));
   var genLabel=pinned.length>0?"Generating from "+pinned.length+" pinned"+(matched.length>0?" + matches "+(matchPage*20+1)+"-"+Math.min((matchPage+1)*20,allMatched.length):""):"Generating from matches "+(matchPage*20+1)+"-"+Math.min((matchPage+1)*20,allMatched.length);
 
   if(loadingData)return <div style={{minHeight:"100vh",background:"#000",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -366,7 +371,7 @@ export default function App(){
       <h1 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:42,color:"#FFF",letterSpacing:"0.04em",marginBottom:4,lineHeight:1}}>GERONIMO UNFILTERED</h1>
       <p style={{color:"#38FC1A",fontSize:12,fontWeight:600,letterSpacing:"0.2em",marginBottom:32}}>PODCAST RESEARCH ENGINE</p>
       <p style={{color:"#DFDFDF",fontSize:16,lineHeight:1.65,marginBottom:16,fontFamily:"'DM Sans',sans-serif"}}>Find what's already working. Use it to build what's next.</p>
-      <p style={{color:"#6B7280",fontSize:14,lineHeight:1.65,marginBottom:40,fontFamily:"'DM Sans',sans-serif"}}>This engine scrapes the full libraries of {CHANNELS.length} top YouTube podcast channels, scores them by performance index, and generates pre-validated episode concepts for Geronimo Unfiltered. Browse the library, pin proven videos, and build episode briefs backed by data.</p>
+      <p style={{color:"#6B7280",fontSize:14,lineHeight:1.65,marginBottom:40,fontFamily:"'DM Sans',sans-serif"}}>This engine scrapes the full libraries of {CHANNELS.length} top YouTube podcast channels, scores them by performance index, and generates pre-validated episode concepts for Geronimo Unfiltered. Switch between YouTube and Podcast mode for format-specific insights and angles. Browse the library, pin proven videos, and build episode briefs backed by data.</p>
       <div style={{display:"flex",gap:16,justifyContent:"center",marginBottom:32,flexWrap:"wrap"}}>
         {[{v:CHANNELS.length,l:"Channels",c:"#38FC1A"},{v:TOPICS.length,l:"Topics",c:"#FFF"}].map(function(s){return <div key={s.l} style={{background:"#111",borderRadius:12,padding:"16px 24px",border:"1px solid #29292D",minWidth:100}}>
           <div style={{fontSize:28,fontWeight:700,color:s.c,fontFamily:"'DM Sans',sans-serif"}}>{s.v}</div>
@@ -375,6 +380,7 @@ export default function App(){
       </div>
       <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
         <button onClick={function(){setShowSplash(false);setTab("library")}} style={{padding:"14px 32px",borderRadius:10,border:"none",background:"#38FC1A",color:"#000",fontSize:15,fontWeight:700,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",transition:"all 0.2s"}}>Browse the Library</button>
+        <button onClick={function(){setShowSplash(false);setTab("our")}} style={{padding:"14px 32px",borderRadius:10,border:"1px solid #38FC1A",background:"transparent",color:"#38FC1A",fontSize:15,fontWeight:600,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",transition:"all 0.2s"}}>Our Podcast</button>
         <button onClick={function(){setShowSplash(false);setTab("builder")}} style={{padding:"14px 32px",borderRadius:10,border:"1px solid #29292D",background:"transparent",color:"#FFF",fontSize:15,fontWeight:600,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",transition:"all 0.2s"}}>Build an Episode</button>
         <button onClick={function(){setShowSplash(false);setTab("guide")}} style={{padding:"14px 32px",borderRadius:10,border:"1px solid #29292D",background:"transparent",color:"#6B7280",fontSize:15,fontWeight:500,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",transition:"all 0.2s"}}>How it Works</button>
       </div>
@@ -397,7 +403,10 @@ export default function App(){
             <p style={{color:"#38FC1A",fontSize:10,fontWeight:600,letterSpacing:"0.12em"}}>PODCAST RESEARCH ENGINE</p>
           </div>
         </div>
-        <div style={{display:"flex",gap:28}}>
+        <div style={{display:"flex",gap:28,alignItems:"center"}}>
+          <div style={{display:"inline-flex",background:"#111",borderRadius:8,padding:3,border:"1px solid #29292D"}}>
+            {[{v:"youtube",l:"YouTube"},{v:"podcast",l:"Podcast"}].map(function(m){return <button key={m.v} onClick={function(){setMode(m.v)}} style={{padding:"6px 14px",border:"none",borderRadius:6,background:mode===m.v?"#38FC1A":"transparent",color:mode===m.v?"#000":"#6B7280",fontWeight:mode===m.v?700:500,fontSize:11,cursor:"pointer",transition:"all 0.2s",fontFamily:"'DM Sans',sans-serif"}}>{m.l}</button>})}
+          </div>
           {[{l:"Episodes",v:DATA.length,c:"#38FC1A"},{l:"Channels",v:CHANNELS.length,c:"#FFF"},{l:"Pinned",v:pinned.length,c:pinned.length>0?"#38FC1A":"#444"},{l:"Saved",v:saved.length,c:"#FEF9C3"}].map(function(s){return <div key={s.l} style={{textAlign:"right"}}>
             <div style={{fontSize:22,fontWeight:700,color:s.c}}>{s.v}</div>
             <div style={{fontSize:9,color:"#666",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase"}}>{s.l}</div>
@@ -408,7 +417,7 @@ export default function App(){
 
     <div style={{background:"#FFF",borderBottom:"1px solid #F0F0EE",position:"sticky",top:0,zIndex:50}}>
       <div style={{maxWidth:1320,margin:"0 auto",padding:"0 28px",display:"flex",gap:8}}>
-        {[{id:"guide",l:"How to Use"},{id:"library",l:"Proven Ideas"},{id:"builder",l:"Episode Builder"+(pinned.length?" ("+pinned.length+" pinned)":"")},{id:"saved",l:"Saved ("+saved.length+")"}].map(function(t){return <button key={t.id} onClick={function(){setTab(t.id)}} style={{padding:"14px 20px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid #38FC1A":"2px solid transparent",color:tab===t.id?"#111":"#9CA3AF",fontWeight:tab===t.id?600:500,fontSize:14,cursor:"pointer",transition:"all 0.2s"}}>{t.l}</button>})}
+        {[{id:"guide",l:"How to Use"},{id:"library",l:"Proven Ideas"},{id:"our",l:mode==="youtube"?"Our YouTube":"Our Podcast"},{id:"builder",l:"Episode Builder"+(pinned.length?" ("+pinned.length+" pinned)":"")},{id:"saved",l:"Saved ("+saved.length+")"}].map(function(t){return <button key={t.id} onClick={function(){setTab(t.id)}} style={{padding:"14px 20px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid #38FC1A":"2px solid transparent",color:tab===t.id?"#111":"#9CA3AF",fontWeight:tab===t.id?600:500,fontSize:14,cursor:"pointer",transition:"all 0.2s"}}>{t.l}</button>})}
       </div>
     </div>
 
@@ -430,12 +439,49 @@ export default function App(){
         <div className="card-grid">{filtered.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(fTp===t?"all":t)}} onUseAsSource={useAsSource} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===v.id})}/>})}</div>
       </>}
 
+      {tab==="our"&&<div style={{maxWidth:1320,margin:"0 auto"}}>
+        {(function(){
+          var ours=DATA.filter(function(v){return v.ch==="Geronimo Unfiltered"});
+          if(ours.length===0)return <div style={{textAlign:"center",padding:"60px 20px",color:"#9CA3AF"}}>
+            <div style={{fontSize:40,marginBottom:12}}>&#127911;</div>
+            <div style={{fontSize:15,fontWeight:600}}>No Geronimo Unfiltered data yet</div>
+            <div style={{fontSize:13,marginTop:8}}>Run the scraper to pull in your episodes. Go to GitHub Actions and trigger the Weekly Podcast Scrape.</div>
+          </div>;
+          var sorted=[].concat(ours).sort(function(a,b){return b.views-a.views});
+          var totalViews=ours.reduce(function(a,v){return a+v.views},0);
+          var avgViews=Math.round(totalViews/ours.length);
+          var topEp=sorted[0];
+          var byTopic={};ours.forEach(function(v){(v.topics||[]).forEach(function(t){if(!byTopic[t])byTopic[t]={count:0,views:0};byTopic[t].count++;byTopic[t].views+=v.views})});
+          var topTopics=Object.keys(byTopic).sort(function(a,b){return byTopic[b].views/byTopic[b].count-byTopic[a].views/byTopic[a].count});
+          return <>
+            <div style={{background:"#000",borderRadius:14,padding:20,marginBottom:24}}>
+              <div style={{fontSize:12,color:"#38FC1A",fontWeight:700,letterSpacing:"0.08em",marginBottom:6}}>{mode==="youtube"?"YOUTUBE INSIGHTS":"PODCAST INSIGHTS"}</div>
+              <p style={{fontSize:14,color:"#DFDFDF",lineHeight:1.6}}>{mode==="youtube"?"Your YouTube channel performance. Study which titles and thumbnails drove the most views. High-PI episodes signal packaging that resonated. Click into them to study the thumbnail design, title structure, and first 30 seconds.":"Your podcast performance across all episodes. High-PI episodes signal topics and angles your audience responds to. Study the framing, guest chemistry, and opening hooks on your top performers."}</p>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16,marginBottom:28}}>
+              {[{l:"Total Episodes",v:ours.length,c:"#38FC1A"},{l:"Total Views",v:fmt(totalViews),c:"#FFF"},{l:"Avg Views",v:fmt(avgViews),c:"#38FC1A"},{l:"Top PI",v:topEp?topEp.pi.toFixed(1)+"x":"",c:"#FFF"}].map(function(s){return <div key={s.l} style={{background:"#000",borderRadius:12,padding:20,border:"1px solid #29292D"}}>
+                <div style={{fontSize:28,fontWeight:700,color:s.c}}>{s.v}</div>
+                <div style={{fontSize:10,color:"#6B7280",fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginTop:4}}>{s.l}</div>
+              </div>})}
+            </div>
+            {topTopics.length>0&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:24,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+              <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:12}}>{mode==="youtube"?"HIGHEST PERFORMING TOPICS (BY AVG VIEWS)":"BEST PERFORMING TOPICS"}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {topTopics.slice(0,8).map(function(t){var c=TC[t]||{bg:"#F3F4F6",t:"#374151"};return <span key={t} style={{padding:"8px 16px",borderRadius:8,background:c.bg,color:c.t,fontSize:13,fontWeight:600,textTransform:"capitalize"}}>{t.replace(/_/g," ")} ({byTopic[t].count} eps, {fmt(Math.round(byTopic[t].views/byTopic[t].count))} avg)</span>})}
+              </div>
+            </div>}
+            <div style={{fontSize:11,color:"#9CA3AF",fontWeight:700,letterSpacing:"0.06em",marginBottom:12}}>{mode==="youtube"?"ALL EPISODES BY VIEWS — STUDY THE THUMBNAILS AND TITLES":"ALL EPISODES BY VIEWS"}</div>
+            <div className="card-grid">{sorted.map(function(v,i){return <VCard key={v.id} v={v} i={i} onTopicClick={function(t){setFTp(t);setTab("library")}} onPin={togglePin} isPinned={pinned.some(function(p){return p.id===v.id})}/>})}</div>
+          </>;
+        })()}
+      </div>}
+
       {tab==="builder"&&<div style={{maxWidth:720,margin:"0 auto"}}>
         <div style={{display:"inline-flex",background:"#F3F4F6",borderRadius:12,padding:4,marginBottom:28}}>
-          {[{v:false,l:"Guest Episode"},{v:true,l:"Internal Team"}].map(function(o){return <button key={o.l} onClick={function(){setIsInt(o.v);setEps([]);setSel([]);setMatchPage(0)}} style={{padding:"10px 24px",border:"none",borderRadius:10,background:isInt===o.v?"#000":"transparent",color:isInt===o.v?"#38FC1A":"#9CA3AF",fontWeight:600,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>{o.l}</button>})}
+          {[{v:"guest",l:"Guest Episode"},{v:"internal",l:"Internal Team"},{v:"client",l:"Client Guest"}].map(function(o){return <button key={o.l} onClick={function(){setIsInt(o.v==="internal");setIsClient(o.v==="client");setEps([]);setSel([]);setMatchPage(0)}} style={{padding:"10px 24px",border:"none",borderRadius:10,background:(o.v==="guest"&&!isInt&&!isClient)||(o.v==="internal"&&isInt)||(o.v==="client"&&isClient)?"#000":"transparent",color:(o.v==="guest"&&!isInt&&!isClient)||(o.v==="internal"&&isInt)||(o.v==="client"&&isClient)?"#38FC1A":"#9CA3AF",fontWeight:600,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>{o.l}</button>})}
         </div>
 
-        {!isInt&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+        {!isInt&&!isClient&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
           <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:12}}>THE GUEST</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
             <input className="fi" value={gName} onChange={function(e){setGName(e.target.value);setEps([]);setSel([])}} placeholder="Guest name"/>
@@ -450,16 +496,49 @@ export default function App(){
           <textarea className="ta" value={intContext} onChange={function(e){setIntContext(e.target.value);setEps([]);setSel([]);setMatchPage(0)}} placeholder="What topic, theme, or idea are you considering? The engine will find proven episodes that validate your idea."/>
         </div>}
 
-        <div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+        {isClient&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+          <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>CLIENT GUEST FINDER</div>
+          <p style={{fontSize:13,color:"#6B7280",lineHeight:1.55,marginBottom:16}}>Search your client database for podcast guest candidates. The engine queries Airtable for active studios and ranks them by performance data. Enter a topic and the matched proven episodes + client data will generate episode concepts featuring your real clients.</p>
+          <textarea className="ta" value={intContext} onChange={function(e){setIntContext(e.target.value);setEps([]);setSel([]);setMatchPage(0)}} placeholder="What topic do you want the client episode to cover? E.g. 'How they went from 80 to 200 members in 6 months' or 'Breaking through the $30k/month revenue ceiling'"/>
+          <div style={{marginTop:14}}>
+            <button className="gbtn" onClick={async function(){
+              setClientLoading(true);setClientResults([]);
+              try{
+                var res=await fetch("/.netlify/functions/client-search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:intContext,metric:"revenue"})});
+                var data=await res.json();
+                if(data.studios)setClientResults(data.studios);
+                else setError(data.error||"No results");
+              }catch(e){setError("Client search failed: "+e.message)}
+              setClientLoading(false);
+            }} disabled={clientLoading} style={{marginBottom:0}}>{clientLoading?"Searching clients...":"Find Guest Candidates"}</button>
+          </div>
+          {clientResults.length>0&&<div style={{marginTop:20}}>
+            <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:10}}>TOP GUEST CANDIDATES ({clientResults.length})</div>
+            {clientResults.map(function(s,i){return <div key={s.id} style={{display:"flex",gap:12,alignItems:"center",background:"#FAFAFA",borderRadius:10,padding:"12px 16px",marginBottom:8,border:"1px solid #F3F4F6",cursor:"pointer"}} onClick={function(){setGName(s.owner||s.name);setGBg(s.name+" — "+s.type+" in "+(s.location||"AU")+". "+(s.revenue?"$"+fmt(s.revenue)+"/mo revenue. ":"")+(s.members?s.members+" active members. ":"")+"Program: "+s.program+". Client since "+(s.kickoff||"unknown")+".");setIsClient(false);setIsInt(false);setEps([]);setSel([])}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",color:"#38FC1A",fontSize:14,fontWeight:700}}>{i+1}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:600,color:"#111"}}>{s.owner||s.name}</div>
+                <div style={{fontSize:12,color:"#9CA3AF"}}>{s.name}{s.type?" · "+s.type:""}{s.location?" · "+s.location:""}</div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                {s.revenue>0&&<div style={{fontSize:14,fontWeight:700,color:"#38FC1A"}}>${fmt(s.revenue)}/mo</div>}
+                {s.members>0&&<div style={{fontSize:11,color:"#9CA3AF"}}>{s.members} members</div>}
+              </div>
+            </div>})}
+            <p style={{fontSize:11,color:"#9CA3AF",marginTop:8}}>Click a client to load them as a guest in the Episode Builder.</p>
+          </div>}
+        </div>}
+
+        {!isClient&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
           <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>FILTER BY TOPIC</div>
           <div style={{fontSize:12,color:"#9CA3AF",marginBottom:12}}>Select topics to filter matches from the full {DATA.length} episode library.</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {TOPICS.map(function(t){var on=gTopics.includes(t);var c=TC[t]||{bg:"#F3F4F6",t:"#374151"};
               return <button key={t} onClick={function(){toggleTopic(t)}} style={{padding:"8px 16px",borderRadius:8,border:on?"2px solid "+c.t:"1px solid #E5E7EB",background:on?c.bg:"#FFF",color:on?c.t:"#9CA3AF",fontSize:13,fontWeight:on?600:500,cursor:"pointer",outline:"none",transition:"all 0.15s",textTransform:"capitalize"}}>{t.replace(/_/g," ")} <span style={{opacity:0.5,fontSize:11}}>({topicCounts[t]||0})</span></button>})}
           </div>
-        </div>
+        </div>}
 
-        {pinned.length>0&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",border:"1px solid #38FC1A"}}>
+        {!isClient&&pinned.length>0&&<div style={{background:"#FFF",borderRadius:14,padding:24,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",border:"1px solid #38FC1A"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em"}}>PINNED FROM LIBRARY ({pinned.length})</div>
             <button className="rbtn" onClick={function(){setPinned([]);setEps([]);setSel([])}}>Clear all pins</button>
@@ -475,7 +554,7 @@ export default function App(){
           </div>})}
         </div>}
 
-        {allMatched.length>0&&<div style={{marginBottom:20}}>
+        {!isClient&&allMatched.length>0&&<div style={{marginBottom:20}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <div style={{fontSize:11,color:"#D1D5DB",fontWeight:700,letterSpacing:"0.06em"}}>SHOWING {matchPage*20+1}-{Math.min((matchPage+1)*20,allMatched.length)} OF {allMatched.length} MATCHES</div>
             <div style={{display:"flex",gap:8}}>
@@ -503,7 +582,7 @@ export default function App(){
         </div>}
 
         {canGen&&eps.length===0&&<div style={{textAlign:"center",marginBottom:8}}><span style={{fontSize:11,color:"#9CA3AF"}}>{genLabel}</span></div>}
-        {canGen&&eps.length===0&&<button className="gbtn" onClick={generate} disabled={loading}>{loading?"Generating 5 concepts...":"Generate Episode Ideas"}</button>}
+        {canGen&&eps.length===0&&<button className="gbtn" onClick={generate} disabled={loading}>{loading?"Generating 5 concepts...":mode==="youtube"?"Generate YouTube Episode Ideas":"Generate Podcast Episode Ideas"}</button>}
         {error&&<div style={{background:"#FEF2F2",borderRadius:12,padding:16,marginBottom:20,color:"#DC2626",fontSize:14,marginTop:16}}>{error}</div>}
         {eps.length>0&&<div style={{marginTop:24}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
@@ -691,7 +770,31 @@ export default function App(){
 
           <div style={{borderBottom:"1px solid #F3F4F6",paddingBottom:24,marginBottom:24}}>
             <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
-              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#CCFBF1",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#0F766E"}}>7</div>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#38FC1A"}}>7</div>
+              <div>
+                <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Our Podcast (Insights)</h3>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>Shows Geronimo Unfiltered's own YouTube analytics. Total episodes, total views, average views, top PI, and which topics perform best on your own channel. All your episodes are displayed sorted by views so you can see what's working for your audience. Pin your own top performers as source material too.</p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{borderBottom:"1px solid #F3F4F6",paddingBottom:24,marginBottom:24}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#38FC1A"}}>8</div>
+              <div>
+                <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Client Guest Finder</h3>
+                <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>The third mode in Episode Builder. Instead of manually asking the team for guest ideas, the engine queries your Airtable client database and surfaces the top studios ranked by performance data (revenue, members). Enter a topic, hit "Find Guest Candidates," and the top 20 clients appear ranked. Click any client to auto-load them as a guest with their studio data pre-filled in the Episode Builder.</p>
+              </div>
+            </div>
+            <div style={{background:"#FAFAFA",borderRadius:10,padding:16,marginLeft:44}}>
+              <div style={{fontSize:11,color:"#38FC1A",fontWeight:700,letterSpacing:"0.06em",marginBottom:8}}>REQUIRES SETUP</div>
+              <p style={{fontSize:13,color:"#374151",lineHeight:1.7}}>Add your <strong>AIRTABLE_API_KEY</strong> to Netlify environment variables (Site settings &gt; Environment variables). The function queries active MDS and MDS Pro studios from the Studio Directory table.</p>
+            </div>
+          </div>
+
+          <div style={{borderBottom:"1px solid #F3F4F6",paddingBottom:24,marginBottom:24}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:16}}>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#CCFBF1",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#0F766E"}}>9</div>
               <div>
                 <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Adding Channels</h3>
                 <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>Edit <strong>scrape.py</strong> on GitHub and add a line to the CHANNELS list: <span style={{fontFamily:"monospace",background:"#F3F4F6",padding:"2px 6px",borderRadius:4,fontSize:12}}>("@HandleName", "Display Name")</span>. Commit and run the scraper from the Actions tab.</p>
@@ -701,7 +804,7 @@ export default function App(){
 
           <div>
             <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#F3F4F6",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#6B7280"}}>8</div>
+              <div style={{flex:"0 0 32px",height:32,borderRadius:8,background:"#F3F4F6",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#6B7280"}}>10</div>
               <div>
                 <h3 style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:6}}>Auto-Refresh</h3>
                 <p style={{fontSize:14,color:"#6B7280",lineHeight:1.6}}>The scraper runs every Sunday at 8pm AEST via GitHub Actions. Fresh data from all {CHANNELS.length} channels is pulled, tagged, and deployed to Netlify automatically. Manual scrapes can be triggered anytime from the GitHub Actions tab.</p>
